@@ -69,8 +69,9 @@ export function pkCalc(day, doseFn = getDose) {
 
   // CYP2D6 inhibition: Wellbutrin provides constant ~2.2x baseline.
   // Prozac adds additional inhibition on top during overlap period.
+  // Cap at 2.8x — CYP2D6 saturates well before 3.5x when both inhibitors present.
   const prozacCypContrib = Math.min(1.0, (fluoxEquiv / 40) * 1.0);
-  const totalCypBoost    = Math.min(3.5, WELLBUTRIN_CYP_FACTOR + prozacCypContrib * 0.4);
+  const totalCypBoost    = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + prozacCypContrib * 0.4);
 
   // Vortioxetine accumulation (affected by CYP2D6 at time of each dose)
   let vortLevel = 0;
@@ -79,7 +80,7 @@ export function pkCalc(day, doseFn = getDose) {
     if (vortDose > 0 && h > d * 24) {
       const elapsed = h - d * 24;
       const doseTimeFluox = fluoxEquivAt(d * 24, doseFn);
-      const doseTimeCyp   = Math.min(3.5, WELLBUTRIN_CYP_FACTOR + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
+      const doseTimeCyp   = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
       vortLevel += vortDose * doseTimeCyp * Math.exp(-LN2 * elapsed / (VORT_HALFLIFE * Math.pow(doseTimeCyp, 0.4)));
     }
   }
