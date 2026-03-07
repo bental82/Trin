@@ -171,12 +171,22 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   const redundancy = Math.min(1, Math.max(0, (pk.sV - 50) / 40));
   const overactivation = pk.sF * redundancy * DUAL_COVERAGE_K;
 
-  // Prozac baseline ~60% — you were functional but not optimal
-  const prozacBaseline = 60;
-  // Trintellix therapeutic gain on top of baseline (modest ~18 points max)
+  // Unmedicated baseline: depression without any drug
+  const UNMEDICATED = 45;
+  // Prozac's PD contribution: autoreceptor desensitization, BDNF, etc. added ~15 points
+  // These effects decay as Prozac leaves — autoreceptor re-sensitization t½ ≈ 14 days
+  // But while Prozac SERT occupancy (sF) is high, PD is maintained
+  const PROZAC_PD_CONTRIB = 15;
+  const PROZAC_PD_REVERT_HALFLIFE = 14; // days for neuroadaptation to revert
+  const sF_retention = Math.min(1, pk.sF / 50);  // PD maintained while sF > 50%
+  const laggedDecay = Math.exp(-LN2 * Math.max(0, day - 5) / PROZAC_PD_REVERT_HALFLIFE);
+  const prozacPdRetention = Math.max(sF_retention, laggedDecay);
+  const prozacPd = PROZAC_PD_CONTRIB * prozacPdRetention;
+
+  // Trintellix therapeutic gain (modest ~18 points max, grows with PK × PD maturation)
   const trinGain = (pkScore / 100) * (pdScore / 100) * 18;
-  // Over-activation pulls you below baseline during overlap
-  const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - overactivation));
+  // Wellbeing = unmedicated + fading Prozac PD + growing Trintellix gain - overactivation
+  const wellbeing = Math.max(0, Math.min(100, UNMEDICATED + prozacPd + trinGain - overactivation));
   return { ...pk, ...pd, pkScore, pdScore, stressScore: overactivation, wellbeing, day };
 }
 
