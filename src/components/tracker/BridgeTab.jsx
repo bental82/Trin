@@ -117,12 +117,12 @@ export default function BridgeTab() {
   const doseBridge14 = useMemo(() => makeBridgeDose(todayN, 14), [todayN]);
   const doseTaper    = useMemo(() => makeTaperDose(todayN), [todayN]);
 
-  const stress10d  = useMemo(() => makeBridgeStress(todayN, 10, 2.0, 6, 5, 2), [todayN]);
-  const stress14d  = useMemo(() => makeBridgeStress(todayN, 14, 2.8, 7, 6, 1.8), [todayN]);
+  const stress10d   = useMemo(() => makeBridgeStress(todayN, 10, 2.0, 6, 5, 2), [todayN]);
+  const stress14d   = useMemo(() => makeBridgeStress(todayN, 14, 2.8, 7, 6, 1.8), [todayN]);
   const stressTaper = useMemo(() => makeBridgeStress(todayN, 15, 0.8, 5, 4, 2.5), [todayN]);
 
-  const boost10d  = useMemo(() => makeBridgeBoost(todayN, 15), [todayN]);
-  const boost14d  = useMemo(() => makeBridgeBoost(todayN, 19), [todayN]);
+  const boost10d   = useMemo(() => makeBridgeBoost(todayN, 15), [todayN]);
+  const boost14d   = useMemo(() => makeBridgeBoost(todayN, 19), [todayN]);
   const boostTaper = useMemo(() => makeBridgeBoost(todayN, 20), [todayN]);
 
   const tl      = useMemo(() => gen(doseActual, computePD), []);
@@ -160,10 +160,10 @@ export default function BridgeTab() {
       </div>
 
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
-        <Btn on={show.grad} onClick={() => tog("grad")} color="#7c3aed" bg="#f5f3ff">📋 Gradual</Btn>
-        <Btn on={show.b10} onClick={() => tog("b10")} color="#d97706" bg="#fffbeb">💊 P20×10d</Btn>
-        <Btn on={show.b14} onClick={() => tog("b14")} color="#e11d48" bg="#fff1f2">💊 P20×14d</Btn>
-        <Btn on={show.taper} onClick={() => tog("taper")} color="#0891b2" bg="#f0f9ff">💊 P20+alt days</Btn>
+        <Btn on={show.grad} onClick={() => tog("grad")} color="#7c3aed" bg="#f5f3ff">{"\u{1F4CB}"} Gradual</Btn>
+        <Btn on={show.b10} onClick={() => tog("b10")} color="#d97706" bg="#fffbeb">{"\u{1F48A}"} P20×10d</Btn>
+        <Btn on={show.b14} onClick={() => tog("b14")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} P20×14d</Btn>
+        <Btn on={show.taper} onClick={() => tog("taper")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt days</Btn>
         <Btn on={show.pk} onClick={() => tog("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
         <Btn on={show.pd} onClick={() => tog("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
         <Btn on={show.st} onClick={() => tog("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
@@ -205,8 +205,8 @@ export default function BridgeTab() {
 
           <Line type="monotone" dataKey="wellbeing" stroke="#22c55e" strokeWidth={2.5} dot={false} name="Actual" />
           {show.grad && <Line type="monotone" dataKey="gradWB" stroke="#8b5cf6" strokeWidth={2} dot={false} strokeDasharray="8 4" name="Gradual" />}
-          {show.b10 && <Line type="monotone" dataKey="b10WB" stroke="#d97706" strokeWidth={2} dot={false} strokeDasharray="6 3" name={"P20×10d"} connectNulls={false} />}
-          {show.b14 && <Line type="monotone" dataKey="b14WB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name={"P20×14d"} connectNulls={false} />}
+          {show.b10 && <Line type="monotone" dataKey="b10WB" stroke="#d97706" strokeWidth={2} dot={false} strokeDasharray="6 3" name={"P20\u00d710d"} connectNulls={false} />}
+          {show.b14 && <Line type="monotone" dataKey="b14WB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name={"P20\u00d714d"} connectNulls={false} />}
           {show.taper && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt days" connectNulls={false} />}
           {show.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
           {show.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
@@ -221,9 +221,9 @@ export default function BridgeTab() {
         {[
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
-          { label: "P20×10d", sub: "10 doses", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
+          { label: "P20\u00d710d", sub: "10 doses", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
             val: tlB10.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: "Dip ~2.0", nc: "#d97706", on: show.b10 },
-          { label: "P20×14d", sub: "14 doses", color: "#e11d48", bg: "#fff1f2", border: "#fecdd3",
+          { label: "P20\u00d714d", sub: "14 doses", color: "#e11d48", bg: "#fff1f2", border: "#fecdd3",
             val: tlB14.find(d => d.day === todayN + 7)?.wellbeing, vl: "mid", note: "Dip ~2.8", nc: "#e11d48", on: show.b14 },
           { label: "P20+ALT", sub: "7d+8d taper", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
             val: tlTaper.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: show.taper },
@@ -280,16 +280,16 @@ export default function BridgeTab() {
       {/* Final recommendation */}
       <div style={{ margin: "12px 0 0", padding: "16px 18px", borderRadius: 12, background: "linear-gradient(135deg, #ecfdf5, #f0f9ff)", border: "2px solid #6ee7b7" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ fontSize: 22 }}>🏆</span>
+          <span style={{ fontSize: 22 }}>{"\u{1F3C6}"}</span>
           <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46" }}>המלצה סופית: P20 + alt days</div>
         </div>
         <div style={{ fontSize: 13, color: "#164e63", lineHeight: 1.8, direction: "rtl", textAlign: "right" }}>
           <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 10px", marginBottom: 10 }}>
-            <span>📋</span><span><b>פרוטוקול:</b> Prozac 20mg יומי × 7 ימים, ואז Prozac 20mg כל יום שני × 8 ימים (סה״כ 11 מנות על פני 15 יום)</span>
-            <span>📉</span><span><b>Dip צפוי:</b> ~0.8 בלבד — הנמוך מכל האסטרטגיות</span>
-            <span>🧬</span><span><b>למה זה עובד:</b> ימי alt days נותנים לנורפלואוקסטין (t½≈9d) לרדת בהדרגה במקום הצטברות ועצירה חדה</span>
-            <span>⏱️</span><span><b>תזמון:</b> 15 ימי כיסוי מגשרים בדיוק על חלון הבשלת ה-PD הקריטי (autoreceptor + GABA)</span>
-            <span>💊</span><span><b>יעילות:</b> פחות מנות מ-P20×14d (11 vs 14), אותו משך כיסוי, פחות עומס על CYP2D6</span>
+            <span>{"\u{1F4CB}"}</span><span><b>פרוטוקול:</b> Prozac 20mg יומי × 7 ימים, ואז Prozac 20mg כל יום שני × 8 ימים (סה״כ 11 מנות על פני 15 יום)</span>
+            <span>{"\u{1F4C9}"}</span><span><b>Dip צפוי:</b> ~0.8 בלבד — הנמוך מכל האסטרטגיות</span>
+            <span>{"\u{1F9EC}"}</span><span><b>למה זה עובד:</b> ימי alt days נותנים לנורפלואוקסטין (t½≈9d) לרדת בהדרגה במקום הצטברות ועצירה חדה</span>
+            <span>{"\u23F1\uFE0F"}</span><span><b>תזמון:</b> 15 ימי כיסוי מגשרים בדיוק על חלון הבשלת ה-PD הקריטי (autoreceptor + GABA)</span>
+            <span>{"\u{1F48A}"}</span><span><b>יעילות:</b> פחות מנות מ-P20×14d (11 vs 14), אותו משך כיסוי, פחות עומס על CYP2D6</span>
           </div>
           <div style={{ padding: "10px 12px", borderRadius: 8, background: "#fff7ed", border: "1px solid #fed7aa", fontSize: 12, color: "#92400e", marginTop: 6 }}>
             ⚠️ <b>חשוב:</b> זו המלצה מבוססת מודל PK/PD תיאורטי. יש לדון עם הפסיכיאטר לפני תחילת כל גישור. ההחלטה הסופית צריכה לשלב שיקול קליני ואת התחושות שלך.

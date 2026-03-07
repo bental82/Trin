@@ -41,7 +41,7 @@ export default function WellbeingTab({ tl, tlM, tN, peakWB }) {
           <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={xTickFormatter(range)} stroke="#e2e8f0" domain={["dataMin", "dataMax"]} />
           <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 11 }} stroke="#e2e8f0" />
           <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} wrapperStyle={{ pointerEvents: "none" }} offset={20} allowEscapeViewBox={{ x: true, y: true }} />
-          <ReferenceLine x={0}  stroke="rgba(251,191,36,.3)"  strokeDasharray="4 3" label={{ value: "Start",      fill: "#fbbf2460", fontSize: 8, position: "top" }} />
+          <ReferenceLine x={0}  stroke="rgba(251,191,36,.3)"  strokeDasharray="4 3" label={{ value: "Start", fill: "#fbbf2460", fontSize: 8, position: "top" }} />
           <ReferenceLine x={tN} stroke="rgba(239,68,68,.7)" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           <Customized component={<TodayHitArea tN={tN} onToggle={() => setShowToday(v => !v)} />} />
           {/* Gradient fills — stroke fully disabled */}

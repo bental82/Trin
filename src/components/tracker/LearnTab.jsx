@@ -14,7 +14,7 @@ function DeepDive({ selC, setSelC, tN, liveTV, onBack }) {
           display: "flex", alignItems: "center", gap: 8,
           padding: "10px 20px", borderRadius: 10, border: "1px solid #bae6fd",
           background: "#f0f9ff", cursor: "pointer", fontSize: 14, fontWeight: 700,
-          color: "#0891b2",          minHeight: 44,
+          color: "#0891b2", minHeight: 44,
         }}>
           ← Back to Map
         </button>
@@ -23,7 +23,8 @@ function DeepDive({ selC, setSelC, tN, liveTV, onBack }) {
         {Object.entries(CONCEPTS).map(([key, c]) => (
           <button key={key} onClick={() => setSelC(key)} style={{
             padding: "4px 9px", borderRadius: 14, border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: selC === key ? 700 : 400,            background: selC === key ? c.color + "18" : "#f1f5f9",
+            fontSize: 12, fontWeight: selC === key ? 700 : 400,
+            background: selC === key ? c.color + "18" : "#f1f5f9",
             color: selC === key ? c.color : "#64748b",
           }}>
             {c.emoji} {c.short}
@@ -173,46 +174,18 @@ function ConceptMap({ setSelC, setLv, tN, liveTV }) {
             <span style={{ padding: "5px 10px", borderRadius: 7, background: "#22d3ee12", border: "1px solid #22d3ee30", fontSize: 13, color: "#22d3ee", fontWeight: 700 }}>🛑 Brake Off</span>
             <span style={{ color: "#94a3b8" }}>+</span>
             <span style={{ padding: "5px 10px", borderRadius: 7, background: "#f9731612", border: "1px solid #f9731630", fontSize: 13, color: "#f97316", fontWeight: 700 }}>🔊 Unmuted</span>
-            <span style={{ color: "#94a3b8" }}>+</span>
-            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#818cf812", border: "1px solid #818cf830", fontSize: 13, color: "#818cf8", fontWeight: 700 }}>🕐 Clock</span>
           </div>
-          <div style={{ padding: "2px 0 2px 36px", color: "#334155", fontSize: 14 }}>↓ <span style={{ fontSize: 12, color: "#475569" }}>sustained firing + cognition + sleep</span></div>
-          <span style={{ padding: "5px 10px", borderRadius: 7, background: "#22c55e12", border: "1px solid #22c55e30", fontSize: 13, color: "#22c55e", fontWeight: 700, alignSelf: "flex-start" }}>🌱 New Wiring</span>
-          <div style={{ padding: "2px 0 2px 36px", color: "#334155", fontSize: 14 }}>↓</div>
+          <div style={{ padding: "2px 0 2px 36px", color: "#334155", fontSize: 14 }}>↓ <span style={{ fontSize: 12, color: "#475569" }}>early PD</span></div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#fbbf2412", border: "1px solid #fbbf2430", fontSize: 13, color: "#fbbf24", fontWeight: 700 }}>🧠 Critic Quiets</span>
+            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#818cf812", border: "1px solid #818cf830", fontSize: 13, color: "#818cf8", fontWeight: 700 }}>🌙 Sleep</span>
             <span style={{ color: "#94a3b8" }}>+</span>
-            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#fb718512", border: "1px solid #fb718530", fontSize: 13, color: "#fb7185", fontWeight: 700 }}>🚿 Trash Cleared</span>
+            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#22c55e12", border: "1px solid #22c55e30", fontSize: 13, color: "#22c55e", fontWeight: 700 }}>🌱 BDNF</span>
           </div>
-          <div style={{ padding: "6px 0 2px 36px", color: "#334155", fontSize: 14 }}>↓</div>
-          <div style={{ padding: "10px 14px", borderRadius: 9, background: "linear-gradient(135deg,rgba(34,197,94,.08),rgba(6,182,212,.08))", border: "1px solid rgba(34,197,94,.2)", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>✨</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#22c55e" }}>Full Therapeutic Effect</div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>Stable mood + clarity + flexibility + resilience</div>
-            </div>
-          </div>
-
-          {/* Transition stress side-track */}
-          <div style={{ marginTop: 16, padding: 12, borderRadius: 9, background: "#ef444406", border: "1px dashed #ef444430" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".08em", color: "#ef4444", marginBottom: 8 }}>⚡ RUNNING IN PARALLEL: TRANSITION STRESS</div>
-            <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.7, marginBottom: 8 }}>
-              While PK→PD cascade progresses, the Prozac→Trintellix switch creates temporary friction:
-            </div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {[
-                { e: "💊", l: "Norfluoxetine clearing", c: "#f87171" },
-                { e: "🔄", l: "Receptor rebalancing", c: "#fb923c" },
-                { e: "🎵", l: "GABA lag", c: "#f59e0b" },
-                { e: "🌙", l: "Circadian disruption", c: "#c084fc" },
-                { e: "🧩", l: "Psychological adjustment", c: "#e879f9" },
-              ].map((s, i) => (
-                <span key={i} style={{ padding: "4px 10px", borderRadius: 6, background: s.c + "10", border: "1px solid " + s.c + "25", fontSize: 12, color: s.c, fontWeight: 600 }}>
-                  {s.e} {s.l}
-                </span>
-              ))}
-            </div>
-            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>Peaks D21-28 · Resolves D35-42 · Tap "⚡ Speed Bump" above for details</div>
+          <div style={{ padding: "2px 0 2px 36px", color: "#334155", fontSize: 14 }}>↓ <span style={{ fontSize: 12, color: "#475569" }}>structural repair</span></div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#fbbf2412", border: "1px solid #fbbf2430", fontSize: 13, color: "#fbbf24", fontWeight: 700 }}>🧩 DMN</span>
+            <span style={{ color: "#94a3b8" }}>+</span>
+            <span style={{ padding: "5px 10px", borderRadius: 7, background: "#fb718512", border: "1px solid #fb718530", fontSize: 13, color: "#fb7185", fontWeight: 700 }}>🧹 Glymphatic</span>
           </div>
         </div>
       </div>
@@ -224,48 +197,25 @@ export default function LearnTab({ tN, tW }) {
   const [lv, setLv] = useState("map");
   const [selC, setSelC] = useState("sert");
 
-  // Build live progress values from tW
-  const liveTV = tW ? {
-    sert:      Math.round(tW.cS),
-    receptors: Math.round(Math.min(95, tW.cS * 1.05)),
-    cyp2d6:    Math.round(Math.min(100, ((tW.cyp - 1) / 2) * 100)),
-    autorecept:Math.round(tW.autorecept),
-    gaba:      Math.round(tW.gabaDisinhib),
-    circadian: Math.round(tW.circadian),
-    bdnf:      Math.round(tW.bdnf),
-    dmn:       Math.round(tW.dmn),
-    glymphatic:Math.round(tW.glymphatic),
-    stress:    Math.round(tW.stressScore),
-    norfluox:  Math.round(Math.max(0, 100 - (tW.stressScore * 1.2))),
-    recbalance:Math.round(Math.max(0, Math.min(100, tW.autorecept * 0.8))),
-    gabalag:   Math.round(tW.gabaDisinhib),
-    circDisrupt:Math.round(tW.circadian),
-    psychAdj:  Math.round(Math.max(0, 100 - tW.stressScore)),
-  } : TV;
+  const liveTV = {};
+  Object.entries(TV).forEach(([key, fn]) => {
+    liveTV[key] = fn(tW).toFixed(0);
+  });
 
   return (
     <div>
       <div style={{ padding: "0 6px", marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#0f172a" }}>How Trintellix Works</h2>
-        <p style={{ margin: "4px 0 0", fontSize: 14, color: "#64748b", lineHeight: 1.6 }}>
-          Drug enters in <b style={{ color: "#06b6d4" }}>hours</b>, occupies targets in <b style={{ color: "#06b6d4" }}>days</b>, brain rewires over <b style={{ color: "#a78bfa" }}>weeks</b>.
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "#0f172a" }}>📖 Learn</h2>
+        <p style={{ margin: "2px 0 0", fontSize: 13, color: "#64748b" }}>
+          {lv === "map" ? "Tap a concept to explore" : CONCEPTS[selC]?.short}
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-        {[["map", "🗺 Map"], ["deep", "📋 Deep Dive"]].map(([id, lb]) => (
-          <button key={id} onClick={() => setLv(id)} style={{
-            padding: "6px 14px", borderRadius: 16, border: "none", cursor: "pointer",
-            fontSize: 14, fontWeight: 600,            background: lv === id ? "rgba(6,182,212,.15)" : "#f1f5f9",
-            color: lv === id ? "#0891b2" : "#475569",
-          }}>
-            {lb}
-          </button>
-        ))}
-      </div>
-
-      {lv === "map"  && <ConceptMap setSelC={setSelC} setLv={setLv} tN={tN} liveTV={liveTV} />}
-      {lv === "deep" && <DeepDive selC={selC} setSelC={setSelC} tN={tN} liveTV={liveTV} onBack={() => setLv("map")} />}
+      {lv === "map" ? (
+        <ConceptMap setSelC={setSelC} setLv={setLv} tN={tN} liveTV={liveTV} />
+      ) : (
+        <DeepDive selC={selC} setSelC={setSelC} tN={tN} liveTV={liveTV} onBack={() => setLv("map")} />
+      )}
     </div>
   );
 }
