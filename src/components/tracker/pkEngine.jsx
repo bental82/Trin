@@ -128,6 +128,11 @@ export function computePD(day) {
     bdnf:           sigmoid(day, 32, 0.1,  100, 7),
     glymphatic:     sigmoid(day, 45, 0.08, 100, 14),
     dmn:            sigmoid(day, 35, 0.09, 100, 10),
+    // Fluoxetine has the lowest discontinuation syndrome risk among SSRIs
+    // due to norfluoxetine's ultra-long half-life acting as a natural taper.
+    // Amplitudes softened (25→8, 15→5) and Gaussians widened to reflect this.
+    norfluoxStress: Math.max(0, 8 * Math.exp(-0.5 * Math.pow((day - 24) / 10, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
+    cypStress:      Math.max(0, 5 * Math.exp(-0.5 * Math.pow((day - 30) / 12, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
   };
 }
 
@@ -160,58 +165,27 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   const pkScore = Math.min(100, (computePkRaw(pk) / Math.max(ssMax, 1)) * 100);
 
   const pdScore = pd.autorecept * 0.25 + pd.gabaDisinhib * 0.20 + pd.circadian * 0.10 + pd.bdnf * 0.20 + pd.glymphatic * 0.10 + pd.dmn * 0.15;
+  const stress = (pd.norfluoxStress || 0) + (pd.cypStress || 0);
 
-  // Over-activation penalty: dual serotonergic coverage from Prozac while Trintellix
-  // is active causes irritability, insomnia, low frustration threshold.
-  // Redundancy-scaled: penalty increases as Trintellix matures (sV rises above 40%).
-  // When sV<40 Prozac is still needed; when sV>80 Prozac is fully redundant → max penalty.
-  // This is NOT discontinuation stress (which barely exists for fluoxetine due to
-  // norfluoxetine's 9-day half-life), but over-stimulation from drug overlap.
-  const DUAL_COVERAGE_K = 0.045;
-  const redundancy = Math.min(1, Math.max(0, (pk.sV - 50) / 40));
-  const overactivation = pk.sF * redundancy * DUAL_COVERAGE_K;
-
-  // Unmedicated baseline: depression without any drug
-  const UNMEDICATED = 45;
-  // Prozac's PD contribution: autoreceptor desensitization, BDNF, etc. added ~15 points
-  // These effects decay as Prozac leaves — autoreceptor re-sensitization t½ ≈ 14 days
-  // But while Prozac SERT occupancy (sF) is high, PD is maintained
-  const PROZAC_PD_CONTRIB = 15;
-  const PROZAC_PD_REVERT_HALFLIFE = 14; // days for neuroadaptation to revert
-  const sF_retention = Math.min(1, pk.sF / 50);  // PD maintained while sF > 50%
-  const laggedDecay = Math.exp(-LN2 * Math.max(0, day - 5) / PROZAC_PD_REVERT_HALFLIFE);
-  const prozacPdRetention = Math.max(sF_retention, laggedDecay);
-  const prozacPd = PROZAC_PD_CONTRIB * prozacPdRetention;
-
-  // Trintellix therapeutic gain (modest ~18 points max, grows with PK × PD maturation)
+  // Prozac baseline ~60% — you were functional but not optimal
+  const prozacBaseline = 60;
+  // Trintellix therapeutic gain on top of baseline (modest ~18 points max)
   const trinGain = (pkScore / 100) * (pdScore / 100) * 18;
-  // Wellbeing = unmedicated + fading Prozac PD + growing Trintellix gain - overactivation
-  const wellbeing = Math.max(0, Math.min(100, UNMEDICATED + prozacPd + trinGain - overactivation));
-  return { ...pk, ...pd, pkScore, pdScore, stressScore: overactivation, wellbeing, day };
+  // Transition dip: stress pulls you below baseline temporarily
+  const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
+  return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
 }
-
-// Cumulative fatigue from prolonged serotonergic over-activation.
-// Shared constants so Bridge tab and main timeline are consistent.
-export const FATIGUE_DECAY = 0.91;
-export const FATIGUE_WEIGHT = 0.38;
 
 export function genTimeline(n = 56) {
   const data = [];
   const s = new Date(START);
-  let fatigue = 0;
   for (let i = 0; i <= n; i += 0.5) {
     const w = computeAll(i);
-    // Apply same cumulative fatigue as BridgeTab for consistency
-    fatigue = fatigue * Math.pow(FATIGUE_DECAY, 0.5) + w.stressScore * 0.5; // half-day steps
-    const fatiguePenalty = fatigue * FATIGUE_WEIGHT;
-    const adjusted = Math.max(0, Math.min(100, w.wellbeing - fatiguePenalty));
     const dt = new Date(s);
     dt.setDate(s.getDate() + Math.floor(i));
     dt.setHours(s.getHours() + (i % 1) * 24);
     data.push({
       ...w,
-      wellbeing: adjusted,
-      stressScore: w.stressScore + fatiguePenalty,
       ds: dt.toLocaleDateString("en-GB", { month: "short", day: "numeric" }),
       di: dt.toISOString().split("T")[0],
     });
