@@ -3,7 +3,7 @@ import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import { getDose, pkCalc, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
+import { getDose, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
 
 // ── Dose schedules ──
 // Each returns [vortioxetine_mg, prozac_mg] for a given day
@@ -42,49 +42,28 @@ const doseGradual = d => {
   return [10, 0];
 };
 
-// ── PD variants ──
+// ── Cumulative fatigue from serotonergic over-activation ──
+// Instead of arbitrary Gaussian stress curves that simulate "withdrawal"
+// (which barely exists for fluoxetine due to norfluoxetine's 9-day t½),
+// we track cumulative system exhaustion from prolonged dual coverage.
+// Each day of over-activation (Prozac SERT while Trintellix active) adds
+// fatigue debt that decays slowly and manifests as reduced wellbeing.
 
-function pdGradual(day) {
-  const base = computePD(day);
-  return {
-    ...base,
-    norfluoxStress: Math.max(0, 4 * Math.exp(-0.5 * ((day - 32) / 10) ** 2)) * (1 / (1 + Math.exp(-1.0 * (day - 20)))),
-    cypStress: Math.max(0, 3 * Math.exp(-0.5 * ((day - 36) / 12) ** 2)) * (1 / (1 + Math.exp(-1.0 * (day - 22)))),
-  };
-}
-
-// ── Bridge stress curves ──
-
-function makeBridgeStress(todayN, endOffset, amplitude, center, width, steepness) {
-  return day => {
-    const da = day - (todayN + endOffset);
-    if (da <= 0) return 0;
-    return Math.max(0, amplitude * Math.exp(-0.5 * ((da - center) / width) ** 2)) * (1 / (1 + Math.exp(-steepness * (da - 1))));
-  };
-}
-
-function makeBridgeBoost(todayN, coverageDays) {
-  return (day, pk) => {
-    return (pk.fE > 2 && day >= todayN && day < todayN + coverageDays)
-      ? Math.min(8, (pk.fE / 20) * 8)
-      : 0;
-  };
-}
-
-// ── Wellbeing calculator (reuses shared pkCalc + computePD) ──
-
-function wb(day, doseFn, pdFn, extraStressFn, boostFn) {
-  const result = computeAll(day, doseFn, pdFn);
-  const extraStress = extraStressFn ? extraStressFn(day) : 0;
-  const boost = boostFn ? boostFn(day, result) : 0;
-  const adjusted = Math.max(0, Math.min(100, result.wellbeing - extraStress + boost));
-  return { ...result, wellbeing: adjusted, stressScore: result.stressScore + extraStress, day };
-}
+const FATIGUE_DECAY = 0.92;    // daily decay — slow enough to differentiate strategies
+const FATIGUE_WEIGHT = 0.45;   // how much cumulative fatigue hits wellbeing
 
 const N = 75;
-function gen(doseFn, pdFn, extraStressFn, boostFn) {
+function gen(doseFn) {
   const data = [];
-  for (let i = 0; i <= N; i++) data.push(wb(i, doseFn, pdFn, extraStressFn, boostFn));
+  let fatigue = 0;
+  for (let i = 0; i <= N; i++) {
+    const result = computeAll(i, doseFn);
+    // stressScore = instantaneous over-activation from pkEngine
+    fatigue = fatigue * FATIGUE_DECAY + result.stressScore;
+    const fatiguePenalty = fatigue * FATIGUE_WEIGHT;
+    const adjusted = Math.max(0, Math.min(100, result.wellbeing - fatiguePenalty));
+    data.push({ ...result, wellbeing: adjusted, stressScore: result.stressScore + fatiguePenalty, day: i });
+  }
   return data;
 }
 
@@ -117,19 +96,11 @@ export default function BridgeTab() {
   const doseBridge14 = useMemo(() => makeBridgeDose(todayN, 14), [todayN]);
   const doseTaper    = useMemo(() => makeTaperDose(todayN), [todayN]);
 
-  const stress10d   = useMemo(() => makeBridgeStress(todayN, 10, 2.0, 6, 5, 2), [todayN]);
-  const stress14d   = useMemo(() => makeBridgeStress(todayN, 14, 2.8, 7, 6, 1.8), [todayN]);
-  const stressTaper = useMemo(() => makeBridgeStress(todayN, 15, 0.8, 5, 4, 2.5), [todayN]);
-
-  const boost10d   = useMemo(() => makeBridgeBoost(todayN, 15), [todayN]);
-  const boost14d   = useMemo(() => makeBridgeBoost(todayN, 19), [todayN]);
-  const boostTaper = useMemo(() => makeBridgeBoost(todayN, 20), [todayN]);
-
-  const tl      = useMemo(() => gen(doseActual, computePD), []);
-  const tlGrad  = useMemo(() => gen(doseGradual, pdGradual), []);
-  const tlB10   = useMemo(() => gen(doseBridge10, computePD, stress10d, boost10d), [doseBridge10, stress10d, boost10d]);
-  const tlB14   = useMemo(() => gen(doseBridge14, computePD, stress14d, boost14d), [doseBridge14, stress14d, boost14d]);
-  const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper), [doseTaper, stressTaper, boostTaper]);
+  const tl      = useMemo(() => gen(doseActual), []);
+  const tlGrad  = useMemo(() => gen(doseGradual), []);
+  const tlB10   = useMemo(() => gen(doseBridge10), [doseBridge10]);
+  const tlB14   = useMemo(() => gen(doseBridge14), [doseBridge14]);
+  const tlTaper = useMemo(() => gen(doseTaper), [doseTaper]);
 
   const data = useMemo(() => tl.map((d, i) => ({
     ...d,
@@ -141,6 +112,15 @@ export default function BridgeTab() {
 
   const todayD = data.find(d => d.day === todayN);
   const minA = tl.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tl[0]);
+
+  // Compute peak fatigue (max stressScore) for each bridge after todayN
+  const peakStress = (timeline, start) => {
+    const relevant = timeline.filter(d => d.day >= start);
+    return relevant.reduce((max, d) => d.stressScore > max ? d.stressScore : max, 0);
+  };
+  const peak10 = peakStress(tlB10, todayN);
+  const peak14 = peakStress(tlB14, todayN);
+  const peakTp = peakStress(tlTaper, todayN);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
     <button onClick={onClick} style={{
@@ -166,7 +146,7 @@ export default function BridgeTab() {
         <Btn on={show.taper} onClick={() => tog("taper")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt days</Btn>
         <Btn on={show.pk} onClick={() => tog("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
         <Btn on={show.pd} onClick={() => tog("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
-        <Btn on={show.st} onClick={() => tog("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
+        <Btn on={show.st} onClick={() => tog("st")} color="#ef4444" bg="#fef2f2">Over-act</Btn>
       </div>
 
       <ResponsiveContainer width="100%" height={370}>
@@ -210,7 +190,7 @@ export default function BridgeTab() {
           {show.taper && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt days" connectNulls={false} />}
           {show.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
           {show.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
-          {show.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Stress" />}
+          {show.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Over-activation" />}
 
           <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
         </ComposedChart>
@@ -222,11 +202,11 @@ export default function BridgeTab() {
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
           { label: "P20\u00d710d", sub: "10 doses", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
-            val: tlB10.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: "Dip ~2.0", nc: "#d97706", on: show.b10 },
+            val: tlB10.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: `Load ${peak10.toFixed(1)}`, nc: "#d97706", on: show.b10 },
           { label: "P20\u00d714d", sub: "14 doses", color: "#e11d48", bg: "#fff1f2", border: "#fecdd3",
-            val: tlB14.find(d => d.day === todayN + 7)?.wellbeing, vl: "mid", note: "Dip ~2.8", nc: "#e11d48", on: show.b14 },
+            val: tlB14.find(d => d.day === todayN + 7)?.wellbeing, vl: "mid", note: `Load ${peak14.toFixed(1)}`, nc: "#e11d48", on: show.b14 },
           { label: "P20+ALT", sub: "7d+8d taper", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
-            val: tlTaper.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: show.taper },
+            val: tlTaper.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: `Load ${peakTp.toFixed(1)}`, nc: "#0891b2", on: show.taper },
         ].map((c, i) => (
           <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>
@@ -267,37 +247,38 @@ export default function BridgeTab() {
       {/* Insight */}
       <div style={{ padding: "14px 16px", borderRadius: 12, background: "#f0f9ff", border: "1.5px solid #a5f3fc" }}>
         <div style={{ fontSize: 13, color: "#164e63", lineHeight: 1.7, direction: "rtl", textAlign: "right" }}>
-          <b>P20×14d</b> — כיסוי ארוך יותר, אבל 14 יום של P20 רציף = יותר הצטברות נורפלואוקסטין, ואז עצירה חדה → dip ~2.8. גדול יותר מ-10d וכמעט כמו P40→P20.
+          <b>מודל Over-Activation</b> — הענישה מבוססת על עומס סרוטונינרגי כפול (Prozac SERT בזמן שטרינטלקס פעיל), לא על "גמילה" שרירותית. פרוזק עם t½≈9d של נורפלואוקסטין כמעט לא יוצר תסמונת גמילה — הבעיה היא העומס היתר בזמן החפיפה.
           <br /><br />
-          <b>P20×10d</b> — כיסוי בינוני. 10 ימים מספיקים לגשר על חלון ה-PD הקריטי, אבל עצירה חדה עדיין יוצרת dip ~2.0.
+          <b>P20×14d</b> — 14 ימים של כיסוי כפול → הצטברות עייפות מערכתית מקסימלית. המערכת "עובדת שעות נוספות" הכי הרבה זמן.
           <br /><br />
-          <b>P20 + alt days</b> — אותו משך כיסוי כמו P20×14d (15 ימים), אבל עם נחיתה רכה. ה-taper המובנה מוריד את הנורפלואוקסטין בהדרגה. Dip ~0.8 בלבד. פחות מנות סה״כ (11 לעומת 14).
+          <b>P20×10d</b> — פחות ימי חפיפה → פחות עייפות מצטברת. מתאושש מהר יותר.
           <br /><br />
-          <b>כלל אצבע:</b> ככל שיותר ימים של P20 רציף → יותר הצטברות → יותר dip בעצירה. alt days שובר את הדפוס הזה.
+          <b>P20 + alt days</b> — ימי ההפסקה נותנים למערכת "לנשום" בין מנות, אבל עם נורפלואוקסטין (t½≈9d), הרמות בדם בקושי יורדות ביום חופש. ההבדל מ-daily מתון.
+          <br /><br />
+          <b>כלל אצבע:</b> ככל שפחות ימי חפיפה → פחות עייפות מצטברת → התאוששות מהירה יותר. עבור פרוזק ספציפית, ההבדלים מתונים יחסית בגלל זמן מחצית החיים הארוך.
         </div>
       </div>
 
-      {/* Final recommendation */}
+      {/* Honest assessment */}
       <div style={{ margin: "12px 0 0", padding: "16px 18px", borderRadius: 12, background: "linear-gradient(135deg, #ecfdf5, #f0f9ff)", border: "2px solid #6ee7b7" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ fontSize: 22 }}>{"\u{1F3C6}"}</span>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46" }}>המלצה סופית: P20 + alt days</div>
+          <span style={{ fontSize: 22 }}>{"\u{1F9EC}"}</span>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46" }}>הערכה כנה: פרוזק = גמילה מינימלית</div>
         </div>
         <div style={{ fontSize: 13, color: "#164e63", lineHeight: 1.8, direction: "rtl", textAlign: "right" }}>
           <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 10px", marginBottom: 10 }}>
-            <span>{"\u{1F4CB}"}</span><span><b>פרוטוקול:</b> Prozac 20mg יומי × 7 ימים, ואז Prozac 20mg כל יום שני × 8 ימים (סה״כ 11 מנות על פני 15 יום)</span>
-            <span>{"\u{1F4C9}"}</span><span><b>Dip צפוי:</b> ~0.8 בלבד — הנמוך מכל האסטרטגיות</span>
-            <span>{"\u{1F9EC}"}</span><span><b>למה זה עובד:</b> ימי alt days נותנים לנורפלואוקסטין (t½≈9d) לרדת בהדרגה במקום הצטברות ועצירה חדה</span>
-            <span>{"\u23F1\uFE0F"}</span><span><b>תזמון:</b> 15 ימי כיסוי מגשרים בדיוק על חלון הבשלת ה-PD הקריטי (autoreceptor + GABA)</span>
-            <span>{"\u{1F48A}"}</span><span><b>יעילות:</b> פחות מנות מ-P20×14d (11 vs 14), אותו משך כיסוי, פחות עומס על CYP2D6</span>
+            <span>{"\u{1F4CA}"}</span><span><b>מה המודל מראה:</b> ההבדלים בין האסטרטגיות מתונים — זה לא באג, זה פיצ'ר. נורפלואוקסטין (t½≈9d) מהווה taper טבעי מובנה.</span>
+            <span>{"\u26A0\uFE0F"}</span><span><b>הסיכון האמיתי:</b> לא גמילה, אלא over-activation בזמן חפיפה. עצבנות, נדודי שינה, סף תסכול נמוך — כל אלה מעומס יתר, לא מחוסר.</span>
+            <span>{"\u{1F4A1}"}</span><span><b>המסקנה:</b> פחות ימי חפיפה = פחות עומס מערכתי. P20×10d מספק כיסוי PD מספיק עם פחות עייפות מצטברת מ-14d.</span>
+            <span>{"\u{1F48A}"}</span><span><b>alt days:</b> יתרון תיאורטי מוגבל עבור פרוזק ספציפית — ימי ההפסקה בקושי מורידים את הרמות בדם בגלל t½ ארוך.</span>
           </div>
           <div style={{ padding: "10px 12px", borderRadius: 8, background: "#fff7ed", border: "1px solid #fed7aa", fontSize: 12, color: "#92400e", marginTop: 6 }}>
-            ⚠️ <b>חשוב:</b> זו המלצה מבוססת מודל PK/PD תיאורטי. יש לדון עם הפסיכיאטר לפני תחילת כל גישור. ההחלטה הסופית צריכה לשלב שיקול קליני ואת התחושות שלך.
+            {"\u26A0\uFE0F"} <b>חשוב:</b> זו המלצה מבוססת מודל PK/PD תיאורטי. יש לדון עם הפסיכיאטר לפני תחילת כל גישור. ההחלטה הסופית צריכה לשלב שיקול קליני ואת התחושות שלך.
           </div>
         </div>
       </div>
 
-      <div style={{ textAlign: "center", fontSize: 9, color: "#94a3b8", padding: "10px 0 0" }}>⚠ Theoretical PK/PD projection — not validated clinical data</div>
+      <div style={{ textAlign: "center", fontSize: 9, color: "#94a3b8", padding: "10px 0 0" }}>{"\u26A0"} Over-activation model · Based on Prozac SERT contribution during overlap · Not validated clinical data</div>
     </div>
   );
 }

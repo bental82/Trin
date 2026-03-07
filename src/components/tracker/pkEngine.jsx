@@ -128,11 +128,6 @@ export function computePD(day) {
     bdnf:           sigmoid(day, 32, 0.1,  100, 7),
     glymphatic:     sigmoid(day, 45, 0.08, 100, 14),
     dmn:            sigmoid(day, 35, 0.09, 100, 10),
-    // Fluoxetine has the lowest discontinuation syndrome risk among SSRIs
-    // due to norfluoxetine's ultra-long half-life acting as a natural taper.
-    // Amplitudes softened (25→8, 15→5) and Gaussians widened to reflect this.
-    norfluoxStress: Math.max(0, 8 * Math.exp(-0.5 * Math.pow((day - 24) / 10, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
-    cypStress:      Math.max(0, 5 * Math.exp(-0.5 * Math.pow((day - 30) / 12, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
   };
 }
 
@@ -165,15 +160,24 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   const pkScore = Math.min(100, (computePkRaw(pk) / Math.max(ssMax, 1)) * 100);
 
   const pdScore = pd.autorecept * 0.25 + pd.gabaDisinhib * 0.20 + pd.circadian * 0.10 + pd.bdnf * 0.20 + pd.glymphatic * 0.10 + pd.dmn * 0.15;
-  const stress = (pd.norfluoxStress || 0) + (pd.cypStress || 0);
+
+  // Over-activation penalty: dual serotonergic coverage from Prozac while Trintellix
+  // is active causes irritability, insomnia, low frustration threshold.
+  // Redundancy-scaled: penalty increases as Trintellix matures (sV rises above 40%).
+  // When sV<40 Prozac is still needed; when sV>80 Prozac is fully redundant → max penalty.
+  // This is NOT discontinuation stress (which barely exists for fluoxetine due to
+  // norfluoxetine's 9-day half-life), but over-stimulation from drug overlap.
+  const DUAL_COVERAGE_K = 0.06;
+  const redundancy = Math.min(1, Math.max(0, (pk.sV - 40) / 40));
+  const overactivation = pk.sF * redundancy * DUAL_COVERAGE_K;
 
   // Prozac baseline ~60% — you were functional but not optimal
   const prozacBaseline = 60;
   // Trintellix therapeutic gain on top of baseline (modest ~18 points max)
   const trinGain = (pkScore / 100) * (pdScore / 100) * 18;
-  // Transition dip: stress pulls you below baseline temporarily
-  const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
-  return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
+  // Over-activation pulls you below baseline during overlap
+  const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - overactivation));
+  return { ...pk, ...pd, pkScore, pdScore, stressScore: overactivation, wellbeing, day };
 }
 
 export function genTimeline(n = 56) {
