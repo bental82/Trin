@@ -53,17 +53,20 @@ const doseGradual = d => {
 
 const N = 75;
 function gen(doseFn) {
-  const data = [];
+  // Use half-day steps matching genTimeline() so Actual line is identical
+  const map = new Map();
   let fatigue = 0;
-  for (let i = 0; i <= N; i++) {
+  for (let i = 0; i <= N; i += 0.5) {
     const result = computeAll(i, doseFn);
-    // stressScore = instantaneous over-activation from pkEngine
-    fatigue = fatigue * FATIGUE_DECAY + result.stressScore;
+    fatigue = fatigue * Math.pow(FATIGUE_DECAY, 0.5) + result.stressScore * 0.5;
     const fatiguePenalty = fatigue * FATIGUE_WEIGHT;
     const adjusted = Math.max(0, Math.min(100, result.wellbeing - fatiguePenalty));
-    data.push({ ...result, wellbeing: adjusted, stressScore: result.stressScore + fatiguePenalty, day: i });
+    // Keep only whole-day points for chart (but compute at half-day for accuracy)
+    if (i === Math.floor(i)) {
+      map.set(i, { ...result, wellbeing: adjusted, stressScore: result.stressScore + fatiguePenalty, day: i });
+    }
   }
-  return data;
+  return Array.from(map.values());
 }
 
 // ── Tooltip ──
