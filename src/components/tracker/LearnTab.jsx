@@ -197,10 +197,24 @@ export default function LearnTab({ tN, tW }) {
   const [lv, setLv] = useState("map");
   const [selC, setSelC] = useState("sert");
 
-  const liveTV = {};
-  Object.entries(TV).forEach(([key, fn]) => {
-    liveTV[key] = fn(tW).toFixed(0);
-  });
+  // Build live progress values from tW (today's computed PK/PD data)
+  const liveTV = tW ? {
+    sert:       Math.round(tW.cS),
+    receptors:  Math.round(Math.min(95, tW.cS * 1.05)),
+    cyp2d6:     Math.round(Math.min(100, ((tW.cyp - 1) / 2) * 100)),
+    autorecept: Math.round(tW.autorecept),
+    gaba:       Math.round(tW.gabaDisinhib),
+    circadian:  Math.round(tW.circadian),
+    bdnf:       Math.round(tW.bdnf),
+    dmn:        Math.round(tW.dmn),
+    glymphatic: Math.round(tW.glymphatic),
+    stress:     Math.round(tW.stressScore),
+    norfluox:   Math.round(Math.max(0, 100 - (tW.stressScore * 1.2))),
+    recbalance: Math.round(Math.max(0, Math.min(100, tW.autorecept * 0.8))),
+    gabalag:    Math.round(tW.gabaDisinhib),
+    circDisrupt:Math.round(tW.circadian),
+    psychAdj:   Math.round(Math.max(0, 100 - tW.stressScore)),
+  } : TV;
 
   return (
     <div>
