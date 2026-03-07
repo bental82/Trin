@@ -167,8 +167,8 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   // When sV<40 Prozac is still needed; when sV>80 Prozac is fully redundant → max penalty.
   // This is NOT discontinuation stress (which barely exists for fluoxetine due to
   // norfluoxetine's 9-day half-life), but over-stimulation from drug overlap.
-  const DUAL_COVERAGE_K = 0.06;
-  const redundancy = Math.min(1, Math.max(0, (pk.sV - 40) / 40));
+  const DUAL_COVERAGE_K = 0.045;
+  const redundancy = Math.min(1, Math.max(0, (pk.sV - 50) / 40));
   const overactivation = pk.sF * redundancy * DUAL_COVERAGE_K;
 
   // Prozac baseline ~60% — you were functional but not optimal
@@ -180,16 +180,28 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   return { ...pk, ...pd, pkScore, pdScore, stressScore: overactivation, wellbeing, day };
 }
 
+// Cumulative fatigue from prolonged serotonergic over-activation.
+// Shared constants so Bridge tab and main timeline are consistent.
+export const FATIGUE_DECAY = 0.91;
+export const FATIGUE_WEIGHT = 0.38;
+
 export function genTimeline(n = 56) {
   const data = [];
   const s = new Date(START);
+  let fatigue = 0;
   for (let i = 0; i <= n; i += 0.5) {
     const w = computeAll(i);
+    // Apply same cumulative fatigue as BridgeTab for consistency
+    fatigue = fatigue * Math.pow(FATIGUE_DECAY, 0.5) + w.stressScore * 0.5; // half-day steps
+    const fatiguePenalty = fatigue * FATIGUE_WEIGHT;
+    const adjusted = Math.max(0, Math.min(100, w.wellbeing - fatiguePenalty));
     const dt = new Date(s);
     dt.setDate(s.getDate() + Math.floor(i));
     dt.setHours(s.getHours() + (i % 1) * 24);
     data.push({
       ...w,
+      wellbeing: adjusted,
+      stressScore: w.stressScore + fatiguePenalty,
       ds: dt.toLocaleDateString("en-GB", { month: "short", day: "numeric" }),
       di: dt.toISOString().split("T")[0],
     });

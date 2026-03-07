@@ -3,7 +3,7 @@ import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import { getDose, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
+import { getDose, computeAll, getTodayN, FATIGUE_DECAY, FATIGUE_WEIGHT } from "@/components/tracker/pkEngine";
 
 // ── Dose schedules ──
 // Each returns [vortioxetine_mg, prozac_mg] for a given day
@@ -49,8 +49,7 @@ const doseGradual = d => {
 // Each day of over-activation (Prozac SERT while Trintellix active) adds
 // fatigue debt that decays slowly and manifests as reduced wellbeing.
 
-const FATIGUE_DECAY = 0.92;    // daily decay — slow enough to differentiate strategies
-const FATIGUE_WEIGHT = 0.45;   // how much cumulative fatigue hits wellbeing
+// FATIGUE_DECAY and FATIGUE_WEIGHT imported from pkEngine (shared with genTimeline)
 
 const N = 75;
 function gen(doseFn) {
