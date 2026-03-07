@@ -1,7 +1,5 @@
 import React from "react";
 
-const MF = {};
-
 export default function ChartTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
@@ -16,7 +14,6 @@ export default function ChartTooltip({ active, payload }) {
       fontSize: 13,
       color: "#334155",
       maxWidth: 280,
-      ...MF,
     }}>
       <div style={{ color: "#0891b2", fontWeight: 700, marginBottom: 4, fontSize: 14 }}>
         Day {Math.round(d.day) + 1} — {d.ds}

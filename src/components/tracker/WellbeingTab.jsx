@@ -8,8 +8,6 @@ import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from 
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
 
-const MF = {};
-
 export default function WellbeingTab({ tl, tlM, tN, peakWB }) {
   const [range, setRange] = useState("day");
   const [showToday, setShowToday] = useState(false);
@@ -20,7 +18,7 @@ export default function WellbeingTab({ tl, tlM, tN, peakWB }) {
     <div>
       <div style={{ padding: "0 6px", marginBottom: 10 }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "#0f172a" }}>Projected Wellbeing</h2>
-        <p style={{ margin: "2px 0 0", fontSize: 13, color: "#64748b", ...MF }}>
+        <p style={{ margin: "2px 0 0", fontSize: 13, color: "#64748b" }}>
           PK ceiling × PD maturation − transition stress · Gold = diary
         </p>
       </div>
@@ -95,7 +93,7 @@ export default function WellbeingTab({ tl, tlM, tN, peakWB }) {
           <div key={i} style={{ padding: "12px 14px", borderRadius: 9, background: p.c + "06", border: "1px solid " + p.c + "18" }}>
             <div style={{ fontSize: 18, marginBottom: 2 }}>{p.i}</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: p.c }}>{p.t}</div>
-            <div style={{ fontSize: 12, color: "#64748b", ...MF }}>{p.l}</div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>{p.l}</div>
             <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5, marginTop: 3 }}>{p.d}</div>
           </div>
         ))}

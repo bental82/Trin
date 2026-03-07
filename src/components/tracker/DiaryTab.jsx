@@ -3,8 +3,6 @@ import { base44 } from "@/api/base44Client";
 import { MOODS, TAGS } from "./concepts";
 import { computeAll, pkCalc, START, TODAY_S } from "./pkEngine";
 
-const MF = {};
-
 export default function DiaryTab() {
   const [entries, setEntries]   = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -18,9 +16,14 @@ export default function DiaryTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await base44.entities.DiaryEntry.list("-entry_date");
-    setEntries(data);
-    setLoading(false);
+    try {
+      const data = await base44.entities.DiaryEntry.list("-entry_date");
+      setEntries(data);
+    } catch (err) {
+      console.error("Failed to load diary entries:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -28,22 +31,31 @@ export default function DiaryTab() {
   const handleSave = async () => {
     if (!sel || !mood) return;
     setSaving(true);
-    const existing = entries.find(e => e.entry_date === sel);
-    if (existing) {
-      await base44.entities.DiaryEntry.update(existing.id, { mood, note, symptoms: symp });
-    } else {
-      await base44.entities.DiaryEntry.create({ entry_date: sel, mood, note, symptoms: symp });
+    try {
+      const existing = entries.find(e => e.entry_date === sel);
+      if (existing) {
+        await base44.entities.DiaryEntry.update(existing.id, { mood, note, symptoms: symp });
+      } else {
+        await base44.entities.DiaryEntry.create({ entry_date: sel, mood, note, symptoms: symp });
+      }
+      await load();
+      setNote("");
+      setMood(null);
+      setSymp([]);
+    } catch (err) {
+      console.error("Failed to save diary entry:", err);
+    } finally {
+      setSaving(false);
     }
-    await load();
-    setNote("");
-    setMood(null);
-    setSymp([]);
-    setSaving(false);
   };
 
   const handleDelete = async (id) => {
-    await base44.entities.DiaryEntry.delete(id);
-    setEntries(prev => prev.filter(e => e.id !== id));
+    try {
+      await base44.entities.DiaryEntry.delete(id);
+      setEntries(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error("Failed to delete diary entry:", err);
+    }
   };
 
   const sN = sel ? dayNum(sel) : null;
@@ -64,7 +76,7 @@ export default function DiaryTab() {
             style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 6, padding: "6px 10px", color: "#0f172a", fontSize: 14 }}
           />
           {sN !== null && sN >= 0 && (
-            <span style={{ fontSize: 12, color: "#0891b2", ...MF }}>
+            <span style={{ fontSize: 12, color: "#0891b2" }}>
               D{sN} · SERT {pkCalc(sN).cS.toFixed(0)}%
             </span>
           )}
@@ -121,9 +133,9 @@ export default function DiaryTab() {
 
       {/* Entries list */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 14, ...MF }}>Loading…</div>
+        <div style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 14 }}>Loading…</div>
       ) : entries.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 14, ...MF }}>No entries yet</div>
+        <div style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 14 }}>No entries yet</div>
       ) : (
         entries.map(entry => {
           const dn = dayNum(entry.entry_date);
@@ -137,7 +149,7 @@ export default function DiaryTab() {
                   <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
                     {new Date(entry.entry_date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
                   </span>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "rgba(6,182,212,.1)", color: "#0891b2", ...MF }}>D{dn}</span>
+                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "rgba(6,182,212,.1)", color: "#0891b2" }}>D{dn}</span>
                   {m && <span style={{ fontSize: 12, color: m.c, fontWeight: 600 }}>{m.l}</span>}
                 </div>
                 {entry.symptoms?.length > 0 && (
@@ -148,7 +160,7 @@ export default function DiaryTab() {
                   </div>
                 )}
                 {entry.note && <p style={{ margin: "3px 0 0", fontSize: 14, color: "#475569", lineHeight: 1.5 }}>{entry.note}</p>}
-                {p && <div style={{ marginTop: 5, fontSize: 12, color: "#94a3b8", ...MF }}>SERT {p.cS.toFixed(0)}% · PD {p.pdScore.toFixed(0)}% · WB {p.wellbeing.toFixed(0)}</div>}
+                {p && <div style={{ marginTop: 5, fontSize: 12, color: "#94a3b8" }}>SERT {p.cS.toFixed(0)}% · PD {p.pdScore.toFixed(0)}% · WB {p.wellbeing.toFixed(0)}</div>}
               </div>
               <button onClick={() => handleDelete(entry.id)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 14, padding: 2 }}>×</button>
             </div>

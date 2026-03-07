@@ -3,44 +3,36 @@ import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import { START, TODAY_N } from "@/components/tracker/pkEngine";
-
-const L2 = Math.log(2);
-const fHL = 48, nHL = 223, nC = 0.8, fE50 = 5, fMx = 83, vHL = 66, vE50 = 5, vMx = 100;
-const wCYP = 2.2;
-const pSF = 40 / (1 - Math.pow(0.5, 24 / fHL));
-
-const REC = {
-  "5-HT3": { ef: 2.3, em: 95 }, "5-HT1A": { ef: 9.4, em: 85 },
-  "5-HT7": { ef: 11.9, em: 90 }, "5-HT1B": { ef: 20.6, em: 80 },
-  "5-HT1D": { ef: 33.7, em: 75 },
-};
+import { getDose, pkCalc, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
 
 // ── Dose schedules ──
-const doseActual = d => {
-  if (d < 0) return [0, 40];
-  if (d === 0) return [5, 20];
-  if (d <= 7) return [10, 20];
-  return [10, 0];
-};
+// Each returns [vortioxetine_mg, prozac_mg] for a given day
 
-const doseBridge10 = d => {
-  if (d < 0) return [0, 40];
-  if (d === 0) return [5, 20];
-  if (d <= 7) return [10, 20];
-  if (d < TODAY_N) return [10, 0];
-  if (d < TODAY_N + 10) return [10, 20];
-  return [10, 0];
-};
+const doseActual = getDose;
 
-const doseBridge14 = d => {
-  if (d < 0) return [0, 40];
-  if (d === 0) return [5, 20];
-  if (d <= 7) return [10, 20];
-  if (d < TODAY_N) return [10, 0];
-  if (d < TODAY_N + 14) return [10, 20];
-  return [10, 0];
-};
+function makeBridgeDose(todayN, bridgeDays) {
+  return d => {
+    if (d < 0) return [0, 40];
+    if (d === 0) return [5, 20];
+    if (d <= 7) return [10, 20];
+    if (d < todayN) return [10, 0];
+    if (d < todayN + bridgeDays) return [10, 20];
+    return [10, 0];
+  };
+}
+
+function makeTaperDose(todayN) {
+  return d => {
+    if (d < 0) return [0, 40];
+    if (d === 0) return [5, 20];
+    if (d <= 7) return [10, 20];
+    if (d < todayN) return [10, 0];
+    if (d >= todayN && d < todayN + 7) return [10, 20];
+    const bd = d - todayN;
+    if (bd >= 7 && bd < 15) return [10, ((bd - 7) % 2 === 0) ? 20 : 0];
+    return [10, 0];
+  };
+}
 
 const doseGradual = d => {
   if (d < 0) return [0, 40];
@@ -50,123 +42,51 @@ const doseGradual = d => {
   return [10, 0];
 };
 
-const doseTaper = d => {
-  if (d < 0) return [0, 40];
-  if (d === 0) return [5, 20];
-  if (d <= 7) return [10, 20];
-  if (d < TODAY_N) return [10, 0];
-  if (d >= TODAY_N && d < TODAY_N + 7) return [10, 20];
-  const bd = d - TODAY_N;
-  if (bd >= 7 && bd < 15) return [10, ((bd - 7) % 2 === 0) ? 20 : 0];
-  return [10, 0];
-};
-
-// ── PK engine (parameterized by dose function) ──
-function fxAt(h, fn) {
-  let l = pSF * Math.exp(-L2 * h / fHL);
-  for (let d = 0; d <= Math.floor(h / 24); d++) {
-    const [, p] = fn(d);
-    if (p > 0 && h > d * 24) l += p * Math.exp(-L2 * (h - d * 24) / fHL);
-  }
-  return (l / pSF) * 40;
-}
-
-function pkCalc(day, fn) {
-  const h = day * 24, mx = Math.floor(day);
-  let fL = pSF * Math.exp(-L2 * Math.max(0, h) / fHL);
-  for (let d = 0; d <= mx; d++) {
-    const [, p] = fn(d);
-    if (p > 0 && h > d * 24) fL += p * Math.exp(-L2 * (h - d * 24) / fHL);
-  }
-  const fE = Math.max(0, (fL / pSF) * 40);
-  const tC = Math.min(3.5, wCYP + Math.min(1.0, fE / 40) * 0.4);
-  let vL = 0;
-  for (let d = 0; d <= mx; d++) {
-    const [v] = fn(d);
-    if (v > 0 && h > d * 24) {
-      const e = h - d * 24;
-      const dF = fxAt(d * 24, fn);
-      const dC = Math.min(3.5, wCYP + Math.min(1.0, dF / 40) * 0.4);
-      vL += v * dC * Math.exp(-L2 * e / (vHL * Math.pow(dC, 0.4)));
-    }
-  }
-  const vE = Math.max(0, vL);
-  const sV = vMx * vE / (vE50 + vE);
-  const sF = fMx * fE / (fE50 + fE);
-  const rO = {};
-  Object.entries(REC).forEach(([n, r]) => { rO[n] = r.em * vE / (vE50 * r.ef + vE); });
-  return { day, fE, vE, cyp: tC, sV, sF, ...rO };
-}
-
-// ── PD ──
-const sig = (day, t50, k, em = 100, lag = 0) => em / (1 + Math.exp(-k * (Math.max(0, day - lag) - t50)));
-
-function basePD(day) {
-  return {
-    autorecept: sig(day, 18, 0.18, 100, 2), gabaDisinhib: sig(day, 12, 0.22, 100, 1),
-    circadian: sig(day, 16, 0.15, 100, 3), bdnf: sig(day, 32, 0.1, 100, 7),
-    glymphatic: sig(day, 45, 0.08, 100, 14), dmn: sig(day, 35, 0.09, 100, 10),
-  };
-}
-
-function pdActual(day) {
-  const b = basePD(day);
-  return { ...b,
-    norfluoxStress: Math.max(0, 8 * Math.exp(-0.5 * ((day - 24) / 10) ** 2)) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
-    cypStress: Math.max(0, 5 * Math.exp(-0.5 * ((day - 30) / 12) ** 2)) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
-  };
-}
+// ── PD variants ──
 
 function pdGradual(day) {
-  const b = basePD(day);
-  return { ...b,
+  const base = computePD(day);
+  return {
+    ...base,
     norfluoxStress: Math.max(0, 4 * Math.exp(-0.5 * ((day - 32) / 10) ** 2)) * (1 / (1 + Math.exp(-1.0 * (day - 20)))),
     cypStress: Math.max(0, 3 * Math.exp(-0.5 * ((day - 36) / 12) ** 2)) * (1 / (1 + Math.exp(-1.0 * (day - 22)))),
   };
 }
 
-// ── Bridge stress ──
-function stress10d(day) {
-  const da = day - (TODAY_N + 10);
-  return da <= 0 ? 0 : Math.max(0, 2.0 * Math.exp(-0.5 * ((da - 6) / 5) ** 2)) * (1 / (1 + Math.exp(-2 * (da - 1))));
+// ── Bridge stress curves ──
+
+function makeBridgeStress(todayN, endOffset, amplitude, center, width, steepness) {
+  return day => {
+    const da = day - (todayN + endOffset);
+    if (da <= 0) return 0;
+    return Math.max(0, amplitude * Math.exp(-0.5 * ((da - center) / width) ** 2)) * (1 / (1 + Math.exp(-steepness * (da - 1))));
+  };
 }
 
-function stress14d(day) {
-  const da = day - (TODAY_N + 14);
-  return da <= 0 ? 0 : Math.max(0, 2.8 * Math.exp(-0.5 * ((da - 7) / 6) ** 2)) * (1 / (1 + Math.exp(-1.8 * (da - 1))));
+function makeBridgeBoost(todayN, coverageDays) {
+  return (day, pk) => {
+    return (pk.fE > 2 && day >= todayN && day < todayN + coverageDays)
+      ? Math.min(8, (pk.fE / 20) * 8)
+      : 0;
+  };
 }
 
-function stressTaper(day) {
-  const da = day - (TODAY_N + 15);
-  return da <= 0 ? 0 : Math.max(0, 0.8 * Math.exp(-0.5 * ((da - 5) / 4) ** 2)) * (1 / (1 + Math.exp(-2.5 * (da - 1))));
-}
+// ── Wellbeing calculator (reuses shared pkCalc + computePD) ──
 
-// ── Boost ──
-function boost10d(day, p) { return (p.fE > 2 && day >= TODAY_N && day < TODAY_N + 15) ? Math.min(8, (p.fE / 20) * 8) : 0; }
-function boost14d(day, p) { return (p.fE > 2 && day >= TODAY_N && day < TODAY_N + 19) ? Math.min(8, (p.fE / 20) * 8) : 0; }
-function boostTaper(day, p) { return (p.fE > 2 && day >= TODAY_N && day < TODAY_N + 20) ? Math.min(8, (p.fE / 20) * 8) : 0; }
-
-// ── Wellbeing ──
-function wb(day, doseFn, pdFn, extraStress = 0, boostFn = null) {
-  const p = pkCalc(day, doseFn);
-  const pd = pdFn(day);
-  const ss = pkCalc(200, doseFn);
-  const pkRaw = p.sV * 0.25 + (p["5-HT3"] || 0) * 0.20 + (p["5-HT1A"] || 0) * 0.15 + (p["5-HT7"] || 0) * 0.10 + (p["5-HT1B"] || 0) * 0.05 + Math.min(100, p.vE * 5) * 0.05;
-  const ssMax = ss.sV * 0.25 + (ss["5-HT3"] || 0) * 0.20 + (ss["5-HT1A"] || 0) * 0.15 + (ss["5-HT7"] || 0) * 0.10 + (ss["5-HT1B"] || 0) * 0.05 + Math.min(100, ss.vE * 5) * 0.05;
-  const pkScore = Math.min(100, (pkRaw / Math.max(ssMax, 1)) * 100);
-  const pdScore = pd.autorecept * 0.25 + pd.gabaDisinhib * 0.20 + pd.circadian * 0.10 + pd.bdnf * 0.20 + pd.glymphatic * 0.10 + pd.dmn * 0.15;
-  const stress = (pd.norfluoxStress || 0) + (pd.cypStress || 0) + extraStress;
-  const boost = boostFn ? boostFn(day, p) : 0;
-  const wellbeing = Math.max(0, Math.min(100, 60 + (pkScore / 100) * (pdScore / 100) * 18 - stress + boost));
-  return { wellbeing, pkScore, pdScore, stressScore: stress, ...p, ...pd, day };
+function wb(day, doseFn, pdFn, extraStressFn, boostFn) {
+  const result = computeAll(day, doseFn, pdFn);
+  const extraStress = extraStressFn ? extraStressFn(day) : 0;
+  const boost = boostFn ? boostFn(day, result) : 0;
+  const adjusted = Math.max(0, Math.min(100, result.wellbeing - extraStress + boost));
+  return { ...result, wellbeing: adjusted, stressScore: result.stressScore + extraStress, day };
 }
 
 const N = 75;
-const gen = (doseFn, pdFn, extra, boost) => {
-  const d = [];
-  for (let i = 0; i <= N; i++) d.push(wb(i, doseFn, pdFn, extra ? extra(i) : 0, boost));
-  return d;
-};
+function gen(doseFn, pdFn, extraStressFn, boostFn) {
+  const data = [];
+  for (let i = 0; i <= N; i++) data.push(wb(i, doseFn, pdFn, extraStressFn, boostFn));
+  return data;
+}
 
 // ── Tooltip ──
 function Tip({ active, payload }) {
@@ -190,21 +110,36 @@ export default function BridgeTab() {
   const [show, setShow] = useState({ grad: false, b10: true, b14: true, taper: true, pk: false, pd: false, st: false });
   const tog = k => setShow(s => ({ ...s, [k]: !s[k] }));
 
-  const tl = useMemo(() => gen(doseActual, pdActual), []);
-  const tlGrad = useMemo(() => gen(doseGradual, pdGradual), []);
-  const tlB10 = useMemo(() => gen(doseBridge10, pdActual, stress10d, boost10d), []);
-  const tlB14 = useMemo(() => gen(doseBridge14, pdActual, stress14d, boost14d), []);
-  const tlTaper = useMemo(() => gen(doseTaper, pdActual, stressTaper, boostTaper), []);
+  // Compute TODAY_N lazily so it's fresh if app stays open overnight
+  const todayN = useMemo(() => getTodayN(), []);
+
+  const doseBridge10 = useMemo(() => makeBridgeDose(todayN, 10), [todayN]);
+  const doseBridge14 = useMemo(() => makeBridgeDose(todayN, 14), [todayN]);
+  const doseTaper    = useMemo(() => makeTaperDose(todayN), [todayN]);
+
+  const stress10d  = useMemo(() => makeBridgeStress(todayN, 10, 2.0, 6, 5, 2), [todayN]);
+  const stress14d  = useMemo(() => makeBridgeStress(todayN, 14, 2.8, 7, 6, 1.8), [todayN]);
+  const stressTaper = useMemo(() => makeBridgeStress(todayN, 15, 0.8, 5, 4, 2.5), [todayN]);
+
+  const boost10d  = useMemo(() => makeBridgeBoost(todayN, 15), [todayN]);
+  const boost14d  = useMemo(() => makeBridgeBoost(todayN, 19), [todayN]);
+  const boostTaper = useMemo(() => makeBridgeBoost(todayN, 20), [todayN]);
+
+  const tl      = useMemo(() => gen(doseActual, computePD), []);
+  const tlGrad  = useMemo(() => gen(doseGradual, pdGradual), []);
+  const tlB10   = useMemo(() => gen(doseBridge10, computePD, stress10d, boost10d), [doseBridge10, stress10d, boost10d]);
+  const tlB14   = useMemo(() => gen(doseBridge14, computePD, stress14d, boost14d), [doseBridge14, stress14d, boost14d]);
+  const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper), [doseTaper, stressTaper, boostTaper]);
 
   const data = useMemo(() => tl.map((d, i) => ({
     ...d,
     gradWB: tlGrad[i]?.wellbeing ?? null,
-    b10WB: i >= TODAY_N ? (tlB10[i]?.wellbeing ?? null) : null,
-    b14WB: i >= TODAY_N ? (tlB14[i]?.wellbeing ?? null) : null,
-    taperWB: i >= TODAY_N ? (tlTaper[i]?.wellbeing ?? null) : null,
-  })), [tl, tlGrad, tlB10, tlB14, tlTaper]);
+    b10WB: i >= todayN ? (tlB10[i]?.wellbeing ?? null) : null,
+    b14WB: i >= todayN ? (tlB14[i]?.wellbeing ?? null) : null,
+    taperWB: i >= todayN ? (tlTaper[i]?.wellbeing ?? null) : null,
+  })), [tl, tlGrad, tlB10, tlB14, tlTaper, todayN]);
 
-  const todayD = data.find(d => d.day === TODAY_N);
+  const todayD = data.find(d => d.day === todayN);
   const minA = tl.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tl[0]);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
@@ -221,7 +156,7 @@ export default function BridgeTab() {
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, background: "linear-gradient(135deg,#0891b2,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           Wellbeing — Bridge Comparison
         </h2>
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>Day {TODAY_N + 1} · Which Prozac bridge is optimal?</p>
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>Day {todayN + 1} · Which Prozac bridge is optimal?</p>
       </div>
 
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
@@ -250,14 +185,14 @@ export default function BridgeTab() {
           <Tooltip content={<Tip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} />
 
           <ReferenceLine x={0} stroke="#fbbf2440" strokeDasharray="4 3" label={{ value: "Start", fill: "#fbbf2460", fontSize: 7, position: "top" }} />
-          <ReferenceLine x={TODAY_N} stroke="#ef4444b0" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
+          <ReferenceLine x={todayN} stroke="#ef4444b0" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           {show.grad && <ReferenceLine x={21} stroke="#8b5cf640" strokeDasharray="3 3" label={{ value: "Grad off", fill: "#8b5cf660", fontSize: 7, position: "top" }} />}
-          {show.b10 && <ReferenceLine x={TODAY_N + 10} stroke="#f59e0b40" strokeDasharray="3 3" label={{ value: "10d end", fill: "#d9770680", fontSize: 7, position: "top" }} />}
-          {show.b14 && <ReferenceLine x={TODAY_N + 14} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "14d end", fill: "#e11d4880", fontSize: 7, position: "top" }} />}
+          {show.b10 && <ReferenceLine x={todayN + 10} stroke="#f59e0b40" strokeDasharray="3 3" label={{ value: "10d end", fill: "#d9770680", fontSize: 7, position: "top" }} />}
+          {show.b14 && <ReferenceLine x={todayN + 14} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "14d end", fill: "#e11d4880", fontSize: 7, position: "top" }} />}
           {show.taper && (
             <>
-              <ReferenceLine x={TODAY_N + 7} stroke="#0891b240" strokeDasharray="3 3" label={{ value: "\u2192alt", fill: "#0891b280", fontSize: 7, position: "top" }} />
-              <ReferenceLine x={TODAY_N + 15} stroke="#0891b230" strokeDasharray="3 3" label={{ value: "P off", fill: "#0891b260", fontSize: 7, position: "top" }} />
+              <ReferenceLine x={todayN + 7} stroke="#0891b240" strokeDasharray="3 3" label={{ value: "\u2192alt", fill: "#0891b280", fontSize: 7, position: "top" }} />
+              <ReferenceLine x={todayN + 15} stroke="#0891b230" strokeDasharray="3 3" label={{ value: "P off", fill: "#0891b260", fontSize: 7, position: "top" }} />
             </>
           )}
 
@@ -287,11 +222,11 @@ export default function BridgeTab() {
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
           { label: "P20×10d", sub: "10 doses", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
-            val: tlB10.find(d => d.day === TODAY_N + 5)?.wellbeing, vl: "mid", note: "Dip ~2.0", nc: "#d97706", on: show.b10 },
+            val: tlB10.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: "Dip ~2.0", nc: "#d97706", on: show.b10 },
           { label: "P20×14d", sub: "14 doses", color: "#e11d48", bg: "#fff1f2", border: "#fecdd3",
-            val: tlB14.find(d => d.day === TODAY_N + 7)?.wellbeing, vl: "mid", note: "Dip ~2.8", nc: "#e11d48", on: show.b14 },
+            val: tlB14.find(d => d.day === todayN + 7)?.wellbeing, vl: "mid", note: "Dip ~2.8", nc: "#e11d48", on: show.b14 },
           { label: "P20+ALT", sub: "7d+8d taper", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
-            val: tlTaper.find(d => d.day === TODAY_N + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: show.taper },
+            val: tlTaper.find(d => d.day === todayN + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: show.taper },
         ].map((c, i) => (
           <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>

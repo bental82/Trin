@@ -8,8 +8,6 @@ import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from 
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
 
-const MF = {};
-
 export default function PDTab({ tl, tN, tW }) {
   const [range, setRange] = useState("day");
   const [showToday, setShowToday] = useState(false);
@@ -78,7 +76,7 @@ export default function PDTab({ tl, tN, tW }) {
             <div style={{ height: 3, borderRadius: 2, background: p.c + "12", marginTop: 3 }}>
               <div style={{ height: "100%", borderRadius: 2, background: p.c, width: p.v + "%" }} />
             </div>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2, ...MF }}>{p.t}</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{p.t}</div>
           </div>
         ))}
       </div>
