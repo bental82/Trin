@@ -27,14 +27,40 @@ export function doseTaper14(d) {
   return [10, 0];
 }
 
-export function genBridgeTimeline14(n = 90) {
+// ── Shared stress/boost helpers with configurable parameters ──
+
+function makeBridgeStress(endOffset, amplitude, center, width, steepness) {
+  return (day) => {
+    const da = day - (BRIDGE_START + endOffset);
+    if (da <= 0) return 0;
+    return Math.max(0, amplitude * Math.exp(-0.5 * ((da - center) / width) ** 2))
+      * (1 / (1 + Math.exp(-steepness * (da - 1))));
+  };
+}
+
+function makeBridgeBoost(coverageDays) {
+  return (day, fE) => {
+    return (fE > 2 && day >= BRIDGE_START && day < BRIDGE_START + coverageDays)
+      ? Math.min(8, (fE / 20) * 8) : 0;
+  };
+}
+
+// 8d: 15d total coverage, stress amp 0.8, width 4, boost coverage 20d
+const bridgeStress   = makeBridgeStress(15, 0.8, 5, 4, 2.5);
+const bridgeBoost    = makeBridgeBoost(20);
+
+// 14d: 21d total coverage, stress amp 0.6, width 5, boost coverage 26d
+const bridgeStress14 = makeBridgeStress(21, 0.6, 5, 5, 2.5);
+const bridgeBoost14  = makeBridgeBoost(26);
+
+// ── Timeline generators ──
+
+function genTimeline(n, doseFn, stressFn, boostFn) {
   const data = [];
   for (let i = 0; i <= n; i += 0.5) {
-    const result = computeAll(i, doseTaper14, computePD);
-    const da = i - (BRIDGE_START + 21);
-    const extra = da <= 0 ? 0 : Math.max(0, 0.6 * Math.exp(-0.5 * ((da - 5) / 5) ** 2)) * (1 / (1 + Math.exp(-2.5 * (da - 1))));
-    const boost = (result.fE > 2 && i >= BRIDGE_START && i < BRIDGE_START + 26)
-      ? Math.min(8, (result.fE / 20) * 8) : 0;
+    const result = computeAll(i, doseFn, computePD);
+    const extra = stressFn(i);
+    const boost = boostFn(i, result.fE);
     const adjustedWB = Math.max(0, Math.min(100, result.wellbeing - extra + boost));
     data.push({
       ...result,
@@ -46,33 +72,10 @@ export function genBridgeTimeline14(n = 90) {
   return data;
 }
 
-// Bridge stress (post-taper dip)
-function bridgeStress(day) {
-  const da = day - (BRIDGE_START + 15);
-  if (da <= 0) return 0;
-  return Math.max(0, 0.8 * Math.exp(-0.5 * ((da - 5) / 4) ** 2)) * (1 / (1 + Math.exp(-2.5 * (da - 1))));
-}
-
-// Bridge boost from residual fluoxetine coverage
-function bridgeBoost(day, fE) {
-  return (fE > 2 && day >= BRIDGE_START && day < BRIDGE_START + 20)
-    ? Math.min(8, (fE / 20) * 8) : 0;
-}
-
-// Generate full bridge timeline with all metrics
 export function genBridgeTimeline(n = 90) {
-  const data = [];
-  for (let i = 0; i <= n; i += 0.5) {
-    const result = computeAll(i, doseTaper, computePD);
-    const extra = bridgeStress(i);
-    const boost = bridgeBoost(i, result.fE);
-    const adjustedWB = Math.max(0, Math.min(100, result.wellbeing - extra + boost));
-    data.push({
-      ...result,
-      wellbeing: adjustedWB,
-      stressScore: result.stressScore + extra,
-      day: i,
-    });
-  }
-  return data;
+  return genTimeline(n, doseTaper, bridgeStress, bridgeBoost);
+}
+
+export function genBridgeTimeline14(n = 90) {
+  return genTimeline(n, doseTaper14, bridgeStress14, bridgeBoost14);
 }

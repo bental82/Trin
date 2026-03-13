@@ -1,9 +1,9 @@
 import React from "react";
-import { BRIDGE_START, doseTaper } from "./bridgeTimeline";
+import { BRIDGE_START, doseTaper14 } from "./bridgeTimeline";
 
 const PHASE_DAILY_LEN = 7;
-const PHASE_ALT_LEN = 8;
-const TOTAL_BRIDGE = PHASE_DAILY_LEN + PHASE_ALT_LEN; // 15 days
+const PHASE_ALT_LEN = 14;
+const TOTAL_BRIDGE = PHASE_DAILY_LEN + PHASE_ALT_LEN; // 21 days
 
 export default function BridgeStatus({ tN }) {
   const bd = tN - BRIDGE_START; // bridge-relative day
@@ -38,7 +38,7 @@ export default function BridgeStatus({ tN }) {
   }
 
   // Currently in bridge
-  const [vortDose, prozacDose] = doseTaper(tN);
+  const [vortDose, prozacDose] = doseTaper14(tN);
   const takeProzacToday = prozacDose > 0;
   const daysLeft = TOTAL_BRIDGE - bd;
 
