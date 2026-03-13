@@ -15,11 +15,13 @@ const LN2 = Math.log(2);
 const FLUOX_HALFLIFE     = 48;
 const NORFLUOX_HALFLIFE  = 223;
 const NORFLUOX_CONV      = 0.8;
-const FLUOX_EC50         = 5;
-const FLUOX_EMAX         = 83;
+const FLUOX_EC50         = 6;
+const FLUOX_EMAX         = 88;
 const VORT_HALFLIFE      = 66;
-const VORT_EC50          = 5;
+const VORT_EC50          = 5;    // receptor subtype reference
 const VORT_EMAX          = 100;
+const VORT_SERT_EC50     = 45;
+const SERT_HILL_N        = 2;
 const WELLBUTRIN_CYP_FACTOR = 2.2;
 const PROZAC_SS_FLUOX    = 40 / (1 - Math.pow(0.5, 24 / FLUOX_HALFLIFE));
 const PROZAC_SS_NORFLUOX = 40 * NORFLUOX_CONV / (1 - Math.pow(0.5, 24 / NORFLUOX_HALFLIFE));
@@ -82,12 +84,14 @@ function pkCalc(day, doseFn) {
       const elapsed = h - d * 24;
       const doseTimeFluox = fluoxEquivAt(d * 24, doseFn);
       const doseTimeCyp   = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
-      vortLevel += vortDose * doseTimeCyp * Math.exp(-LN2 * elapsed / (VORT_HALFLIFE * Math.pow(doseTimeCyp, 0.4)));
+      vortLevel += vortDose * Math.exp(-LN2 * elapsed / (VORT_HALFLIFE * doseTimeCyp));
     }
   }
   const vortEffective = Math.max(0, vortLevel);
-  const sertFromVort  = VORT_EMAX * vortEffective / (VORT_EC50 + vortEffective);
-  const sertFromFluox = FLUOX_EMAX * fluoxEquiv / (FLUOX_EC50 + fluoxEquiv);
+  const vEn = Math.pow(vortEffective, SERT_HILL_N);
+  const fEn = Math.pow(fluoxEquiv, SERT_HILL_N);
+  const sertFromVort  = VORT_EMAX * vEn / (Math.pow(VORT_SERT_EC50, SERT_HILL_N) + vEn);
+  const sertFromFluox = FLUOX_EMAX * fEn / (Math.pow(FLUOX_EC50, SERT_HILL_N) + fEn);
   const combinedSert  = Math.min(98, 100 * (1 - (1 - sertFromVort / 100) * (1 - sertFromFluox / 100)));
   return { day, fE: fluoxEquiv, nfE: norfluoxLevel, vE: vortEffective, cyp: totalCypBoost, sV: sertFromVort, sF: sertFromFluox, cS: combinedSert };
 }

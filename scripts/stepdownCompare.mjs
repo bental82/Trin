@@ -5,7 +5,8 @@
 
 const LN2 = Math.log(2);
 const FLUOX_HALFLIFE = 48, NORFLUOX_HALFLIFE = 223, NORFLUOX_CONV = 0.8;
-const FLUOX_EC50 = 5, FLUOX_EMAX = 83, VORT_HALFLIFE = 66, VORT_EC50 = 5, VORT_EMAX = 100;
+const FLUOX_EC50 = 6, FLUOX_EMAX = 88, VORT_HALFLIFE = 66, VORT_EC50 = 5, VORT_EMAX = 100;
+const VORT_SERT_EC50 = 45, SERT_HILL_N = 2;
 const WELLBUTRIN_CYP_FACTOR = 2.2;
 const PROZAC_SS_FLUOX = 40 / (1 - Math.pow(0.5, 24 / FLUOX_HALFLIFE));
 const PROZAC_SS_NORFLUOX = 40 * NORFLUOX_CONV / (1 - Math.pow(0.5, 24 / NORFLUOX_HALFLIFE));
@@ -89,12 +90,13 @@ function pkCalc(day, doseFn) {
       const el = h - d * 24;
       const dtF = fluoxEquivAt(d * 24, doseFn);
       const dtC = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + Math.min(1, dtF / 40) * 0.4);
-      vL += v * dtC * Math.exp(-LN2 * el / (VORT_HALFLIFE * Math.pow(dtC, 0.4)));
+      vL += v * Math.exp(-LN2 * el / (VORT_HALFLIFE * dtC));
     }
   }
   const vE = Math.max(0, vL);
-  const sV = VORT_EMAX * vE / (VORT_EC50 + vE);
-  const sF = FLUOX_EMAX * fE / (FLUOX_EC50 + fE);
+  const vEn = Math.pow(vE, SERT_HILL_N), fEn = Math.pow(fE, SERT_HILL_N);
+  const sV = VORT_EMAX * vEn / (Math.pow(VORT_SERT_EC50, SERT_HILL_N) + vEn);
+  const sF = FLUOX_EMAX * fEn / (Math.pow(FLUOX_EC50, SERT_HILL_N) + fEn);
   const cS = Math.min(98, 100 * (1 - (1 - sV / 100) * (1 - sF / 100)));
   return { day, fE, nfE: norfluoxLevel, vE, cyp: cypB, sV, sF, cS };
 }

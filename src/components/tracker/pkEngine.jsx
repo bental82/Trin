@@ -14,11 +14,13 @@ export function getDose(d) {
 const FLUOX_HALFLIFE     = 48;   // hours — fluoxetine
 const NORFLUOX_HALFLIFE  = 223;  // hours — norfluoxetine (active metabolite)
 const NORFLUOX_CONV      = 0.8;  // conversion ratio fluoxetine → norfluoxetine
-const FLUOX_EC50         = 5;    // Michaelis-Menten EC50 for fluoxetine SERT binding
-const FLUOX_EMAX         = 83;   // max SERT occupancy from fluoxetine (%)
+const FLUOX_EC50         = 6;    // Hill EC50 for fluoxetine SERT (PET-calibrated, n=2)
+const FLUOX_EMAX         = 88;   // max SERT occupancy from fluoxetine (%) — PET ceiling (Meyer 2004)
 const VORT_HALFLIFE      = 66;   // hours — vortioxetine
-const VORT_EC50          = 5;    // Michaelis-Menten EC50 for vortioxetine SERT binding
+const VORT_EC50          = 5;    // reference EC50 for receptor subtype occupancy calculations
 const VORT_EMAX          = 100;  // max SERT occupancy from vortioxetine (%)
+const VORT_SERT_EC50     = 45;   // Hill EC50 for vortioxetine SERT (PET-calibrated: 10mg→50%)
+const SERT_HILL_N        = 2;    // Hill coefficient — fitted to PET dose-response (Stenkrona 2015)
 
 // Wellbutrin (bupropion) is a strong CYP2D6 inhibitor taken continuously.
 // Per Chen et al. (2013, PMC3775155): AUC +128% (~2.28x), Cmax +114% (~2.14x).
@@ -89,12 +91,15 @@ export function pkCalc(day, doseFn = getDose) {
   }
   const vortEffective = Math.max(0, vortLevel);
 
-  // Michaelis-Menten SERT occupancy
-  const sertFromVort  = VORT_EMAX * vortEffective / (VORT_EC50 + vortEffective);
-  const sertFromFluox = FLUOX_EMAX * fluoxEquiv / (FLUOX_EC50 + fluoxEquiv);
-  // Competitive binding: both drugs compete for the same SERT orthosteric site,
-  // so we sum normalized concentrations and apply Michaelis-Menten once.
-  const combinedSert  = Math.min(98, 100 * (vortEffective / VORT_EC50 + fluoxEquiv / FLUOX_EC50) / (1 + vortEffective / VORT_EC50 + fluoxEquiv / FLUOX_EC50));
+  // Hill equation SERT occupancy (n=2, PET-calibrated EC50s)
+  // 10mg normal→50%, 20mg normal→80%, 10mg+Wellbutrin→81% (Stenkrona 2015)
+  const vEn = Math.pow(vortEffective, SERT_HILL_N);
+  const fEn = Math.pow(fluoxEquiv, SERT_HILL_N);
+  const sertFromVort  = VORT_EMAX * vEn / (Math.pow(VORT_SERT_EC50, SERT_HILL_N) + vEn);
+  const sertFromFluox = FLUOX_EMAX * fEn / (Math.pow(FLUOX_EC50, SERT_HILL_N) + fEn);
+  // Bliss independence of PET-calibrated Hill values — appropriate here because
+  // each drug has a different Emax, and individual values are already PET-matched.
+  const combinedSert  = Math.min(98, 100 * (1 - (1 - sertFromVort / 100) * (1 - sertFromFluox / 100)));
 
   // 5-HT receptor subtype occupancy
   const receptorOccupancy = {};
