@@ -121,23 +121,38 @@ export function pkCalc(day, doseFn = getDose) {
   };
 }
 
-// ── PD (pharmacodynamic maturation — Trintellix neuroadaptation only) ──
+// ── PD (pharmacodynamic maturation) ──
+// Prozac already matured several shared downstream mechanisms over years of use.
+// Each sigmoid gets a carryover floor so it doesn't start from zero.
+// Only Trintellix-specific mechanisms (GABA disinhibition via 5-HT3) start fresh.
 
 function sigmoid(day, t50, k, emax = 100, lag = 0) {
   const t = Math.max(0, day - lag);
   return emax / (1 + Math.exp(-k * (t - t50)));
 }
 
-// PD reflects Trintellix neuroadaptation ONLY — no Prozac baseline carried over.
-// Prozac's influence is visible only through shared metrics (SERT occupancy, wellbeing).
+// carryover: fraction of emax already achieved from prior Prozac use (0–1).
+// The sigmoid grows from carryover×emax toward emax.
+function sigmoidWithCarryover(day, t50, k, emax, lag, carryover) {
+  const raw = sigmoid(day, t50, k, emax, lag);
+  return carryover * emax + (1 - carryover) * raw;
+}
+
 export function computePD(day) {
   return {
-    autorecept:     sigmoid(day, 18, 0.18, 100, 2),
-    gabaDisinhib:   sigmoid(day, 12, 0.22, 100, 1),
-    circadian:      sigmoid(day, 16, 0.15, 100, 3),
-    bdnf:           sigmoid(day, 32, 0.1,  100, 7),
-    glymphatic:     sigmoid(day, 45, 0.08, 100, 14),
-    dmn:            sigmoid(day, 35, 0.09, 100, 10),
+    // Autoreceptor desensitization: Prozac already desensitized 5-HT1A autoreceptors;
+    // Trintellix hits the same receptors (partial agonist). ~55% carryover.
+    autorecept:     sigmoidWithCarryover(day, 18, 0.18, 100, 2, 0.55),
+    // GABA disinhibition: Trintellix-specific (5-HT3 antagonism). No carryover.
+    gabaDisinhib:   sigmoidWithCarryover(day, 12, 0.22, 100, 1, 0),
+    // Circadian entrainment: partial overlap via serotonergic tone. ~30% carryover.
+    circadian:      sigmoidWithCarryover(day, 16, 0.15, 100, 3, 0.30),
+    // BDNF upregulation: all SSRIs drive this robustly. ~65% carryover.
+    bdnf:           sigmoidWithCarryover(day, 32, 0.1,  100, 7, 0.65),
+    // Glymphatic: weak serotonergic overlap. ~10% carryover.
+    glymphatic:     sigmoidWithCarryover(day, 45, 0.08, 100, 14, 0.10),
+    // DMN reconfiguration: partial overlap. ~25% carryover.
+    dmn:            sigmoidWithCarryover(day, 35, 0.09, 100, 10, 0.25),
     // Fluoxetine has the lowest discontinuation syndrome risk among SSRIs
     // due to norfluoxetine's ultra-long half-life acting as a natural taper.
     // Amplitudes softened (25→8, 15→5) and Gaussians widened to reflect this.
@@ -180,8 +195,10 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
 
   // Prozac baseline ~60% — you were functional but not optimal
   const prozacBaseline = 60;
-  // Trintellix therapeutic gain on top of baseline (modest ~18 points max)
-  const trinGain = (pkScore / 100) * (pdScore / 100) * 18;
+  // With PD carryover, the sigmoids start higher → pdScore starts ~35-40% instead of ~0%.
+  // Max therapeutic gain is more modest: ~12 points (was 18 when PD started from zero).
+  // This reflects that Trintellix refines what Prozac built, not a fresh neuroadaptation.
+  const trinGain = (pkScore / 100) * (pdScore / 100) * 12;
   // Transition dip: stress pulls you below baseline temporarily
   const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
   return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
