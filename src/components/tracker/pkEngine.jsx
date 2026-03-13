@@ -81,7 +81,10 @@ export function pkCalc(day, doseFn = getDose) {
       const elapsed = h - d * 24;
       const doseTimeFluox = fluoxEquivAt(d * 24, doseFn);
       const doseTimeCyp   = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
-      vortLevel += vortDose * doseTimeCyp * Math.exp(-LN2 * elapsed / (VORT_HALFLIFE * Math.pow(doseTimeCyp, 0.4)));
+      // CYP inhibition reduces clearance → extends t½ and proportionally increases AUC.
+      // Using t½ × CYP factor (not dose × CYP) avoids double-counting.
+      // At CYP=2.2 (bupropion alone): t½ ≈ 145h, AUC ≈ 2.2× — matches CYP2D6 PM literature.
+      vortLevel += vortDose * Math.exp(-LN2 * elapsed / (VORT_HALFLIFE * doseTimeCyp));
     }
   }
   const vortEffective = Math.max(0, vortLevel);
@@ -89,7 +92,9 @@ export function pkCalc(day, doseFn = getDose) {
   // Michaelis-Menten SERT occupancy
   const sertFromVort  = VORT_EMAX * vortEffective / (VORT_EC50 + vortEffective);
   const sertFromFluox = FLUOX_EMAX * fluoxEquiv / (FLUOX_EC50 + fluoxEquiv);
-  const combinedSert  = Math.min(98, 100 * (1 - (1 - sertFromVort / 100) * (1 - sertFromFluox / 100)));
+  // Competitive binding: both drugs compete for the same SERT orthosteric site,
+  // so we sum normalized concentrations and apply Michaelis-Menten once.
+  const combinedSert  = Math.min(98, 100 * (vortEffective / VORT_EC50 + fluoxEquiv / FLUOX_EC50) / (1 + vortEffective / VORT_EC50 + fluoxEquiv / FLUOX_EC50));
 
   // 5-HT receptor subtype occupancy
   const receptorOccupancy = {};
@@ -144,6 +149,7 @@ function computePkRaw(pk) {
     (pk["5-HT1A"] || 0) * 0.15 +
     (pk["5-HT7"]  || 0) * 0.10 +
     (pk["5-HT1B"] || 0) * 0.05 +
+    (pk["5-HT1D"] || 0) * 0.05 +
     Math.min(100, pk.vE * 5) * 0.05
   );
 }
