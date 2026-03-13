@@ -27,6 +27,19 @@ export function doseTaper14(d) {
   return [10, 0];
 }
 
+// P20 step-down: 7d daily → 8d every other day → 6d every 3rd day
+export function doseStepdown(d) {
+  if (d < 0) return [0, 40];
+  if (d === 0) return [5, 20];
+  if (d <= 7) return [10, 20];
+  if (d < BRIDGE_START) return [10, 0];
+  if (d >= BRIDGE_START && d < BRIDGE_START + 7) return [10, 20];
+  const bd = d - BRIDGE_START;
+  if (bd >= 7 && bd < 15) return [10, ((bd - 7) % 2 === 0) ? 20 : 0];
+  if (bd >= 15 && bd < 21) return [10, ((bd - 15) % 3 === 0) ? 20 : 0];
+  return [10, 0];
+}
+
 // ── Shared stress/boost helpers with configurable parameters ──
 
 function makeBridgeStress(endOffset, amplitude, center, width, steepness) {
@@ -53,6 +66,10 @@ const bridgeBoost    = makeBridgeBoost(20);
 const bridgeStress14 = makeBridgeStress(21, 0.6, 5, 5, 2.5);
 const bridgeBoost14  = makeBridgeBoost(26);
 
+// Step-down: 7d daily → 8d q2d → 6d q3d (21d total, softer landing)
+const bridgeStressSD = makeBridgeStress(21, 0.7, 5, 4.5, 2.5);
+const bridgeBoostSD  = makeBridgeBoost(24);
+
 // ── Timeline generators ──
 
 function genTimeline(n, doseFn, stressFn, boostFn) {
@@ -78,4 +95,8 @@ export function genBridgeTimeline(n = 90) {
 
 export function genBridgeTimeline14(n = 90) {
   return genTimeline(n, doseTaper14, bridgeStress14, bridgeBoost14);
+}
+
+export function genBridgeTimelineSD(n = 90) {
+  return genTimeline(n, doseStepdown, bridgeStressSD, bridgeBoostSD);
 }

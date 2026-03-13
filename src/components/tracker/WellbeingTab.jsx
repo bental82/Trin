@@ -8,9 +8,14 @@ import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from 
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
 
-export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge }) {
+const STRATEGY_LABELS = { alt8: "P20+alt 8d", alt14: "P20+alt 14d", stepdown: "Step-down" };
+const STRATEGY_COLORS = { alt8: "#0891b2", alt14: "#7c3aed", stepdown: "#d97706" };
+
+export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge, strategy }) {
   const [range, setRange] = useState("day");
   const [showToday, setShowToday] = useState(false);
+  const bridgeLabel = STRATEGY_LABELS[strategy] || "Bridge";
+  const bridgeColor = STRATEGY_COLORS[strategy] || "#0891b2";
   const merged = tl.map((d, i) => ({ ...d, bridgeWB: tlBridge?.[i]?.wellbeing ?? null }));
   const chartData = cleanZeroLine(filterByRange(merged, range), ["pkScore", "pdScore", "stressScore", "wellbeing", "bridgeWB"]);
   const todayData = tl.find(d => d.day === tN);
@@ -50,7 +55,7 @@ export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge }) {
           <Area type="monotone" dataKey="stressScore" fill="url(#stg)" fillOpacity={1} stroke="transparent" strokeWidth={0} activeDot={false} legendType="none" tooltipType="none" name="stFill" isAnimationActive={false} connectNulls={false} />
           {/* Lines on top */}
           <Line type="monotone" dataKey="wellbeing"   stroke="#22c55e" strokeWidth={3}   dot={false} name="Wellbeing" connectNulls={false} />
-          <Line type="monotone" dataKey="bridgeWB"   stroke="#0891b2" strokeWidth={2}   dot={false} strokeDasharray="6 3" name="P20+alt 8d" connectNulls={false} />
+          <Line type="monotone" dataKey="bridgeWB"   stroke={bridgeColor} strokeWidth={2}   dot={false} strokeDasharray="6 3" name={bridgeLabel} connectNulls={false} />
           <Line type="monotone" dataKey="pkScore"     stroke="#06b6d4" strokeWidth={1.2} dot={false} strokeDasharray="5 3" name="PK Ceiling" connectNulls={false} />
           <Line type="monotone" dataKey="pdScore"     stroke="#a78bfa" strokeWidth={1.2} dot={false} strokeDasharray="5 3" name="PD Maturation" connectNulls={false} />
           <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1.2} dot={false} strokeDasharray="3 3" name="Transition Stress" connectNulls={false} />

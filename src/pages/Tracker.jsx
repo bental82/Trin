@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { genTimeline, computeAll, getDose, computePD, TODAY_N } from "@/components/tracker/pkEngine";
-import { genBridgeTimeline, genBridgeTimeline14, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
+import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
 import TodayTab      from "@/components/tracker/TodayTab";
 import WellbeingTab  from "@/components/tracker/WellbeingTab";
 import PDTab         from "@/components/tracker/PDTab";
@@ -34,10 +34,14 @@ export default function Tracker() {
   const [showHelp, setShowHelp] = useState(false);
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
+  const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown"
 
   const tl     = useMemo(() => genTimeline(90), []);
   const tlBridge = useMemo(() => genBridgeTimeline(90), []);
   const tlBridge14 = useMemo(() => genBridgeTimeline14(90), []);
+  const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90), []);
+  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD };
+  const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
   const tW     = useMemo(() => computeAll(tN), [tN]);
   const peakWB = useMemo(() => tl.reduce((b, d) => d.wellbeing > b.wellbeing ? d : b, tl[0]), [tl]);
@@ -45,9 +49,9 @@ export default function Tracker() {
   const day1WB = useMemo(() => computeAll(0).wellbeing, []);
 
   const altDaysWB = useMemo(() => {
-    const bd = tlBridge.find(d => d.day === tN);
+    const bd = tlActive.find(d => d.day === tN);
     return bd ? bd.wellbeing : 0;
-  }, [tN, tlBridge]);
+  }, [tN, tlActive]);
 
   const statCards = [
     {
@@ -72,11 +76,11 @@ export default function Tracker() {
       detail: `Model projection: PK ceiling × PD access − transition stress. Peak projected at Day ${Math.round(peakWB.day) + 1} (score ${peakWB.wellbeing.toFixed(0)}).`,
     },
     {
-      label: "P20+Alt Days Wellbeing",
+      label: "Bridge Wellbeing",
       value: altDaysWB.toFixed(1),
       color: "#0891b2",
       icon: "🌉",
-      detail: "Projected wellbeing if using the P20+alt days bridge strategy (Prozac 20mg daily ×7d, then every other day ×8d, starting D23).",
+      detail: `Projected wellbeing for selected bridge strategy (${strategy === "alt8" ? "P20+alt 8d" : strategy === "alt14" ? "P20+alt 14d" : "Step-down"}).`,
     },
     {
       label: "Transition Stress",
@@ -324,12 +328,12 @@ export default function Tracker() {
 
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
-        {tab === "today"    && <TodayTab tN={tN} statCards={statCards} />}
-        {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlBridge={tlBridge} />}
+        {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} />}
+        {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlBridge={tlActive} strategy={strategy} />}
         {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} />}
-        {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlBridge={tlBridge} />}
-        {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlBridge={tlBridge} />}
-        {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlBridge={tlBridge} />}
+        {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlBridge={tlActive} />}
+        {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlBridge={tlActive} />}
+        {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlBridge={tlActive} />}
         {tab === "bridge"   && <BridgeTab />}
         {tab === "learn"    && <LearnTab tN={tN} tW={tW} />}
         {tab === "glossary" && <GlossaryTab />}
