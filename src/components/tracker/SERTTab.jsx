@@ -11,14 +11,7 @@ import TodayHitArea from "./ClickableTodayLine";
 export default function SERTTab({ tl, tN, tlBridge }) {
   const [range, setRange] = useState("day");
   const [showToday, setShowToday] = useState(false);
-  const raw = tl.map((d, i) => ({ ...d, bridgeCS: tlBridge?.[i]?.cS ?? null }));
-  // Smooth bridge SERT with 2-day rolling average to reduce alt-day dosing oscillations
-  const merged = raw.map((d, i) => {
-    if (d.bridgeCS == null) return d;
-    const window = raw.slice(Math.max(0, i - 2), i + 3);
-    const vals = window.map(w => w.bridgeCS).filter(v => v != null);
-    return { ...d, bridgeCS: vals.reduce((a, b) => a + b, 0) / vals.length };
-  });
+  const merged = tl.map((d, i) => ({ ...d, bridgeCS: tlBridge?.[i]?.cS ?? null }));
   const chartData = cleanZeroLine(filterByRange(merged, range), ["cS", "sV", "sF", "bridgeCS"]);
   const todayData = tl.find(d => d.day === tN);
   return (
