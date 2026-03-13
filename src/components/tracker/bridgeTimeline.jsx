@@ -58,16 +58,19 @@ function makeBridgeBoost(coverageDays) {
   };
 }
 
-// 8d: 15d total coverage, stress amp 0.8, width 4, boost coverage 20d
-const bridgeStress   = makeBridgeStress(15, 0.8, 5, 4, 2.5);
+// Stress amplitudes calibrated from PK-computed SERT occupancy cliffs:
+//   Alt 8d:  SERT drops 26.1pp over 10d post-bridge → amp 0.80
+//   Alt 14d: SERT drops 26.5pp over 10d post-bridge → amp 0.80 (same cliff, just delayed)
+//   Step-down: SERT drops 24.0pp over 10d → amp 0.73 (q3d phase pre-tapers SERT)
+// The real advantage of longer bridges is more Trintellix PD maturation time,
+// not a softer discontinuation cliff (norfluoxetine t½=223h dominates either way).
+const bridgeStress   = makeBridgeStress(15, 0.80, 5, 4,   2.5);
 const bridgeBoost    = makeBridgeBoost(20);
 
-// 14d: 21d total coverage, stress amp 0.6, width 5, boost coverage 26d
-const bridgeStress14 = makeBridgeStress(21, 0.6, 5, 5, 2.5);
+const bridgeStress14 = makeBridgeStress(21, 0.80, 5, 5,   2.5);
 const bridgeBoost14  = makeBridgeBoost(26);
 
-// Step-down: 7d daily → 8d q2d → 6d q3d (21d total, softer landing)
-const bridgeStressSD = makeBridgeStress(21, 0.7, 5, 4.5, 2.5);
+const bridgeStressSD = makeBridgeStress(21, 0.73, 5, 4.5, 2.5);
 const bridgeBoostSD  = makeBridgeBoost(24);
 
 // ── Timeline generators ──
