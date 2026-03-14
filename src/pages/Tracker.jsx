@@ -361,7 +361,7 @@ export default function Tracker() {
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
         {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} strategyLabel={strategyLabel} />}
-        {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} />}
+        {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}

@@ -7,19 +7,36 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import { cleanZeroLine } from "./TimeRangeSelector";
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
+import StrategyToggles, { STRATEGY_COLORS, STRATEGY_LABELS } from "./StrategyToggles";
 
-export default function PDTab({ tl, tN, tW }) {
+const PD_KEYS = ["gabaDisinhib", "autorecept", "circadian", "bdnf", "dmn", "glymphatic"];
+
+export default function PDTab({ tl, tN, tW, tlAll, bridgeShow, setBridgeShow }) {
   const [showToday, setShowToday] = useState(false);
   const todayData = tl.find(d => d.day === tN);
   const filtered = tl.filter(d => d.day <= 60 && d.day % 1 === 0);
-  const chartData = cleanZeroLine(filtered, [
-    "gabaDisinhib", "autorecept", "circadian", "bdnf", "dmn", "glymphatic"
+
+  // Merge bridge strategy pdScore into chart data
+  const merged = filtered.map((d) => {
+    const i = tl.indexOf(d);
+    const row = { ...d };
+    Object.entries(tlAll).forEach(([k, bl]) => {
+      row["bPD_" + k] = bl?.[i]?.pdScore ?? null;
+    });
+    return row;
+  });
+  const chartData = cleanZeroLine(merged, [
+    ...PD_KEYS,
+    ...Object.keys(tlAll).map(k => "bPD_" + k),
   ]);
+
   return (
     <div>
       <div style={{ padding: "0 6px", marginBottom: 10 }}>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "#0f172a" }}>PD Maturation Curves</h2>
       </div>
+
+      <StrategyToggles show={bridgeShow} setShow={setBridgeShow} />
 
       <ResponsiveContainer width="100%" height={280} style={{ overflow: "visible" }}>
         <ComposedChart data={chartData} margin={{ top: 5, right: 6, left: -14, bottom: 5 }}>
@@ -29,12 +46,16 @@ export default function PDTab({ tl, tN, tW }) {
           <Tooltip {...TOOLTIP_PROPS} content={<ChartTooltip />} />
           <ReferenceLine x={tN} stroke="rgba(239,68,68,.7)" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           <Customized component={<TodayHitArea tN={tN} onToggle={() => setShowToday(v => !v)} />} />
-          <Line type="monotone" dataKey="gabaDisinhib" stroke="#f97316" strokeWidth={2}   dot={false} name="GABA Disinhibition" connectNulls={false} />
-          <Line type="monotone" dataKey="autorecept"   stroke="#22d3ee" strokeWidth={2}   dot={false} name="Autoreceptor Desens." connectNulls={false} />
-          <Line type="monotone" dataKey="circadian"    stroke="#818cf8" strokeWidth={1.8} dot={false} name="Circadian" connectNulls={false} />
-          <Line type="monotone" dataKey="bdnf"         stroke="#22c55e" strokeWidth={2}   dot={false} name="BDNF" connectNulls={false} />
-          <Line type="monotone" dataKey="dmn"          stroke="#fbbf24" strokeWidth={1.8} dot={false} name="DMN" connectNulls={false} />
-          <Line type="monotone" dataKey="glymphatic"   stroke="#fb7185" strokeWidth={1.8} dot={false} name="Glymphatic" connectNulls={false} />
+          <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={2.5} dot={false} name="PD Score (actual)" connectNulls={false} />
+          {Object.entries(STRATEGY_COLORS).map(([k, c]) =>
+            bridgeShow[k] && <Line key={k} type="monotone" dataKey={"bPD_" + k} stroke={c} strokeWidth={2} dot={false} strokeDasharray="6 3" name={STRATEGY_LABELS[k]} connectNulls={false} />
+          )}
+          <Line type="monotone" dataKey="gabaDisinhib" stroke="#f97316" strokeWidth={1.5}   dot={false} name="GABA Disinhibition" connectNulls={false} />
+          <Line type="monotone" dataKey="autorecept"   stroke="#22d3ee" strokeWidth={1.5}   dot={false} name="Autoreceptor Desens." connectNulls={false} />
+          <Line type="monotone" dataKey="circadian"    stroke="#818cf8" strokeWidth={1.3} dot={false} name="Circadian" connectNulls={false} />
+          <Line type="monotone" dataKey="bdnf"         stroke="#22c55e" strokeWidth={1.5}   dot={false} name="BDNF" connectNulls={false} />
+          <Line type="monotone" dataKey="dmn"          stroke="#fbbf24" strokeWidth={1.3} dot={false} name="DMN" connectNulls={false} />
+          <Line type="monotone" dataKey="glymphatic"   stroke="#fb7185" strokeWidth={1.3} dot={false} name="Glymphatic" connectNulls={false} />
           <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
         </ComposedChart>
       </ResponsiveContainer>
