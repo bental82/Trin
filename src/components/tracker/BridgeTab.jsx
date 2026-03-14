@@ -4,7 +4,7 @@ import {
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
 import { getDose, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
-import { BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate } from "@/components/tracker/bridgeTimeline";
+import { BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate, doseUptitrate15w } from "@/components/tracker/bridgeTimeline";
 import { TOOLTIP_PROPS } from "@/components/tracker/ChartTooltip";
 
 // ── Bridge stress curves ──
@@ -51,7 +51,7 @@ function Tip({ active, payload, isDelta }) {
   const dt = new Date("2026-02-12");
   dt.setDate(dt.getDate() + Math.floor(day));
   const ds = dt.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
-  const skip = new Set(["wbF", "stF", "tpF", "tp14F", "sdF", "utF"]);
+  const skip = new Set(["wbF", "stF", "tpF", "tp14F", "sdF", "utF", "ut15F"]);
   return (
     <div style={{ background: "#ffffffee", border: "1px solid #e2e8f0", borderRadius: 10, padding: "8px 12px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,.08)", maxWidth: 240, backdropFilter: "blur(6px)" }}>
       <div style={{ fontWeight: 700, marginBottom: 3, color: "#0891b2" }}>Day {(day ?? 0) + 1} — {ds}</div>
@@ -78,18 +78,21 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
   const stressTaper = useMemo(() => makeBridgeStress(15, 0.8, 5, 4, 2.5), []);
   const stressTpr14 = useMemo(() => makeBridgeStress(21, 0.6, 5, 5, 2.5), []);
   const stressSD    = useMemo(() => makeBridgeStress(21, 0.7, 5, 4.5, 2.5), []);
-  const stressUT    = useMemo(() => makeBridgeStress(21, 0.65, 5, 5, 2.5), []);
+  const stressUT    = useMemo(() => makeBridgeStress(21, 0.60, 5, 5, 2.5), []);
+  const stressUT15  = useMemo(() => makeBridgeStress(21, 0.65, 5, 5, 2.5), []);
 
   const boostTaper = useMemo(() => makeBridgeBoost(20), []);
   const boostTpr14 = useMemo(() => makeBridgeBoost(26), []);
   const boostSD    = useMemo(() => makeBridgeBoost(24), []);
   const boostUT    = useMemo(() => makeBridgeBoost(26), []);
+  const boostUT15  = useMemo(() => makeBridgeBoost(26), []);
 
   const tl      = useMemo(() => gen(getDose, computePD, null, null, cypBase), [cypBase]);
   const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper, cypBase), [stressTaper, boostTaper, cypBase]);
   const tlTpr14 = useMemo(() => gen(doseTaper14, computePD, stressTpr14, boostTpr14, cypBase), [stressTpr14, boostTpr14, cypBase]);
   const tlSD    = useMemo(() => gen(doseStepdown, computePD, stressSD, boostSD, cypBase), [stressSD, boostSD, cypBase]);
   const tlUT    = useMemo(() => gen(doseUptitrate, computePD, stressUT, boostUT, cypBase), [stressUT, boostUT, cypBase]);
+  const tlUT15  = useMemo(() => gen(doseUptitrate15w, computePD, stressUT15, boostUT15, cypBase), [stressUT15, boostUT15, cypBase]);
 
   const data = useMemo(() => tl.map((d, i) => ({
     ...d,
@@ -97,7 +100,8 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
     taper14WB: tlTpr14[i]?.wellbeing ?? null,
     sdWB: tlSD[i]?.wellbeing ?? null,
     utWB: tlUT[i]?.wellbeing ?? null,
-  })), [tl, tlTaper, tlTpr14, tlSD, tlUT]);
+    ut15WB: tlUT15[i]?.wellbeing ?? null,
+  })), [tl, tlTaper, tlTpr14, tlSD, tlUT, tlUT15]);
 
   // Delta data: difference from Actual for each strategy
   const deltaData = useMemo(() => data.map(d => ({
@@ -106,6 +110,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
     dTaper14: d.taper14WB != null ? d.taper14WB - d.wellbeing : null,
     dSD: d.sdWB != null ? d.sdWB - d.wellbeing : null,
     dUT: d.utWB != null ? d.utWB - d.wellbeing : null,
+    dUT15: d.ut15WB != null ? d.ut15WB - d.wellbeing : null,
   })), [data]);
 
   const todayD = data.find(d => d.day === todayN);
@@ -116,6 +121,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
   const minTpr14 = tlTpr14.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlTpr14[0]);
   const minSD    = tlSD.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlSD[0]);
   const minUT    = tlUT.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlUT[0]);
+  const minUT15  = tlUT15.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlUT15[0]);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
     <button onClick={onClick} style={{
@@ -138,7 +144,8 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
         <Btn on={bridgeShow.alt8} onClick={() => togBridge("alt8")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt 8d</Btn>
         <Btn on={bridgeShow.alt14} onClick={() => togBridge("alt14")} color="#7c3aed" bg="#f5f3ff">{"\u{1F48A}"} P20+alt 14d</Btn>
         <Btn on={bridgeShow.sd} onClick={() => togBridge("sd")} color="#d97706" bg="#fffbeb">{"\u{1F48A}"} Step-down</Btn>
-        <Btn on={bridgeShow.ut} onClick={() => togBridge("ut")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} T20 early</Btn>
+        <Btn on={bridgeShow.ut} onClick={() => togBridge("ut")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} T20 fast</Btn>
+        <Btn on={bridgeShow.ut15} onClick={() => togBridge("ut15")} color="#be185d" bg="#fdf2f8">{"\u{1F48A}"} T15 wk</Btn>
         <Btn on={extra.pk} onClick={() => togExtra("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
         <Btn on={extra.pd} onClick={() => togExtra("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
         <Btn on={extra.st} onClick={() => togExtra("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
@@ -154,6 +161,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
             <linearGradient id="btp14g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7c3aed" stopOpacity={0.12} /><stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} /></linearGradient>
             <linearGradient id="bsdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d97706" stopOpacity={0.12} /><stop offset="100%" stopColor="#d97706" stopOpacity={0.02} /></linearGradient>
             <linearGradient id="butg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e11d48" stopOpacity={0.12} /><stop offset="100%" stopColor="#e11d48" stopOpacity={0.02} /></linearGradient>
+            <linearGradient id="but15g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#be185d" stopOpacity={0.12} /><stop offset="100%" stopColor="#be185d" stopOpacity={0.02} /></linearGradient>
             <linearGradient id="bstg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.1} /><stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} /></linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -184,8 +192,14 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           )}
           {bridgeShow.ut && (
             <>
-              <ReferenceLine x={BRIDGE_START + 7} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "T20 alt", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
+              <ReferenceLine x={BRIDGE_START + 9} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "\u2192T20", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
               <ReferenceLine x={BRIDGE_START + 21} stroke="#e11d4820" strokeDasharray="3 3" label={{ value: "T20 only", fill: "#e11d4860", fontSize: 7, position: "insideBottom" }} />
+            </>
+          )}
+          {bridgeShow.ut15 && (
+            <>
+              <ReferenceLine x={BRIDGE_START + 14} stroke="#be185d40" strokeDasharray="3 3" label={{ value: "\u2192T20", fill: "#be185d80", fontSize: 7, position: "insideBottom" }} />
+              <ReferenceLine x={BRIDGE_START + 21} stroke="#be185d20" strokeDasharray="3 3" label={{ value: "T20 only", fill: "#be185d60", fontSize: 7, position: "insideBottom" }} />
             </>
           )}
 
@@ -195,12 +209,14 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           {bridgeShow.alt14 && <Area type="monotone" dataKey="taper14WB" fill="url(#btp14g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tp14F" isAnimationActive={false} connectNulls={false} />}
           {bridgeShow.sd && <Area type="monotone" dataKey="sdWB" fill="url(#bsdg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="sdF" isAnimationActive={false} connectNulls={false} />}
           {bridgeShow.ut && <Area type="monotone" dataKey="utWB" fill="url(#butg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="utF" isAnimationActive={false} connectNulls={false} />}
+          {bridgeShow.ut15 && <Area type="monotone" dataKey="ut15WB" fill="url(#but15g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="ut15F" isAnimationActive={false} connectNulls={false} />}
 
           <Line type="monotone" dataKey="wellbeing" stroke="#22c55e" strokeWidth={2.5} dot={false} name="Actual" />
           {bridgeShow.alt8 && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 8d" connectNulls={false} />}
           {bridgeShow.alt14 && <Line type="monotone" dataKey="taper14WB" stroke="#7c3aed" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 14d" connectNulls={false} />}
           {bridgeShow.sd && <Line type="monotone" dataKey="sdWB" stroke="#d97706" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="Step-down" connectNulls={false} />}
-          {bridgeShow.ut && <Line type="monotone" dataKey="utWB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="T20 early" connectNulls={false} />}
+          {bridgeShow.ut && <Line type="monotone" dataKey="utWB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="T20 fast" connectNulls={false} />}
+          {bridgeShow.ut15 && <Line type="monotone" dataKey="ut15WB" stroke="#be185d" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="T15 wk" connectNulls={false} />}
           {extra.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
           {extra.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
           {extra.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Stress" />}
@@ -232,7 +248,8 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
               {bridgeShow.alt8 && <Line type="monotone" dataKey="dTaper" stroke="#0891b2" strokeWidth={2.5} dot={false} name="P20+alt 8d" connectNulls={false} />}
               {bridgeShow.alt14 && <Line type="monotone" dataKey="dTaper14" stroke="#7c3aed" strokeWidth={2.5} dot={false} name="P20+alt 14d" connectNulls={false} />}
               {bridgeShow.sd && <Line type="monotone" dataKey="dSD" stroke="#d97706" strokeWidth={2.5} dot={false} name="Step-down" connectNulls={false} />}
-              {bridgeShow.ut && <Line type="monotone" dataKey="dUT" stroke="#e11d48" strokeWidth={2.5} dot={false} name="T20 early" connectNulls={false} />}
+              {bridgeShow.ut && <Line type="monotone" dataKey="dUT" stroke="#e11d48" strokeWidth={2.5} dot={false} name="T20 fast" connectNulls={false} />}
+              {bridgeShow.ut15 && <Line type="monotone" dataKey="dUT15" stroke="#be185d" strokeWidth={2.5} dot={false} name="T15 wk" connectNulls={false} />}
               <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -240,7 +257,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
       )}
 
       {/* Strategy cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginTop: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, marginTop: 12 }}>
         {[
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
@@ -253,9 +270,12 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           { label: "STEP-DOWN", sub: "7d+8d+6d", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
             val: todayD ? (tlSD.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
             note: `Dip ${minSD.wellbeing.toFixed(1)}`, nc: minSD.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.sd },
-          { label: "T20 EARLY", sub: "T20 from bridge", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
+          { label: "T20 FAST", sub: "T20 tomorrow", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
             val: todayD ? (tlUT.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
             note: `Dip ${minUT.wellbeing.toFixed(1)}`, nc: minUT.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.ut },
+          { label: "T15 WK", sub: "T15 wk1, T20 wk2", color: "#be185d", bg: "#fdf2f8", border: "#f9a8d4",
+            val: todayD ? (tlUT15.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
+            note: `Dip ${minUT15.wellbeing.toFixed(1)}`, nc: minUT15.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.ut15 },
         ].map((c, i) => (
           <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>
@@ -281,7 +301,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
         </div>
 
         <div style={{ fontWeight: 600, fontSize: 11, color: "#64748b", marginBottom: 6 }}>Bridge Phase (from D23)</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, fontSize: 11 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, fontSize: 11 }}>
           <div>
             <div style={{ fontWeight: 700, color: "#0891b2", marginBottom: 3 }}>P20+alt 8d</div>
             <div style={{ color: "#64748b" }}>P20 daily × 7d</div>
@@ -304,12 +324,25 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
             <div style={{ color: "#64748b" }}>Then T10 only</div>
             <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>13 doses · gradual step-down</div>
           </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 11, marginTop: 10, padding: "10px", borderRadius: 8, background: "#fdf2f8", border: "1px solid #f9a8d4" }}>
           <div>
-            <div style={{ fontWeight: 700, color: "#e11d48", marginBottom: 3 }}>T20 early</div>
-            <div style={{ color: "#64748b" }}>T20+P20 daily × 7d</div>
-            <div style={{ color: "#64748b" }}>T20+P20 q2d × 14d</div>
+            <div style={{ fontWeight: 700, color: "#e11d48", marginBottom: 3 }}>T20 fast</div>
+            <div style={{ color: "#64748b" }}>T10+P20 daily × 7d</div>
+            <div style={{ color: "#64748b" }}>T10+P20 alt (1d)</div>
+            <div style={{ color: "#64748b" }}>T15 (today)</div>
+            <div style={{ color: "#64748b", fontWeight: 700 }}>{"\u2192"} T20+P20 alt tomorrow</div>
             <div style={{ color: "#64748b" }}>Then T20 only</div>
-            <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>14 doses · T20 steady by bridge end</div>
+            <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>Max accumulation time for T20</div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: "#be185d", marginBottom: 3 }}>T15 wk</div>
+            <div style={{ color: "#64748b" }}>T10+P20 daily × 7d</div>
+            <div style={{ color: "#64748b" }}>T10+P20 alt (1d)</div>
+            <div style={{ color: "#64748b" }}>T15+P20 alt × 6d</div>
+            <div style={{ color: "#64748b", fontWeight: 700 }}>{"\u2192"} T20+P20 alt wk2</div>
+            <div style={{ color: "#64748b" }}>Then T20 only</div>
+            <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>Gentler step: T15 adjusts first</div>
           </div>
         </div>
       </div>
@@ -323,7 +356,9 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           <br /><br />
           <b>Step-down</b> — 21 ימי כיסוי (7d רציף + 8d כל יום שני + 6d כל יום שלישי). ירידה הדרגתית בתלת-שלבים. 13 מנות. נחיתה הכי חלקה מבחינת קצב ירידת fE.
           <br /><br />
-          <b>T20 early</b> — T20 מרגע תחילת הגשר: 7 ימי P20+T20 רציף, ואז 14 ימי alt. היתרון: T20 מצטבר לאורך 21 יום (~7.6 מחציות חיים) ומגיע ל-steady state מלא עוד לפני שהגשר נגמר. SERT 88–92% מ-T20 לבד. אפס פער בכיסוי.
+          <b>T20 fast</b> — T20 מחר (אחרי יום אחד של T15). מקסימום זמן הצטברות ל-T20 בתוך הגשר. ב-steady state מלא לפני שהגשר נגמר. היתרון: SERT 88–92% מ-T20 לבד כשהפרוזק נעלם.
+          <br /><br />
+          <b>T15 wk</b> — T15 שבוע שלם (שאר ה-alt הראשון), T20 רק בשבוע השני. נותן לגוף להסתגל ל-15mg לפני הקפיצה. פחות זמן הצטברות ל-T20 אבל מעבר הדרגתי יותר.
           <br /><br />
           <b>כלל אצבע:</b> alt days שובר את דפוס ההצטברות. step-down מוסיף שלב שלישי (q3d) שמאט את הירידה עוד יותר.
         </div>

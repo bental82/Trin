@@ -27,17 +27,33 @@ export function doseTaper14(d) {
   return [10, 0];
 }
 
-// Uptitrate: T20 from bridge start to maximize accumulation during bridge cover.
-// 7d daily P20+T20, then 14d alt P20+T20, then T20 only (already at steady state).
+// Option A — "T20 fast": T10 alt day 1 (bd 7), T15 day 2 (bd 8, today), T20 from bd 9 (tomorrow).
+// Pre-bridge: T10+P20 daily 7d, then T10 washout, then T10+P20 bridge daily 7d.
 export function doseUptitrate(d) {
   if (d < 0) return [0, 40];
   if (d === 0) return [5, 20];
   if (d <= 7) return [10, 20];
   if (d < BRIDGE_START) return [10, 0];
   const bd = d - BRIDGE_START;
-  if (bd < 7) return [20, 20];                                              // 7d daily P20 + T20
-  if (bd >= 7 && bd < 21) return [20, ((bd - 7) % 2 === 0) ? 20 : 0];      // 14d alt: T20
-  return [20, 0];                                                            // T20 only — full steady state
+  if (bd < 7) return [10, 20];                                              // 7d daily P20 + T10
+  if (bd === 7) return [10, 20];                                             // alt day 1: T10 (yesterday)
+  if (bd === 8) return [15, 0];                                              // alt day 2: T15 (today, P20 off)
+  if (bd >= 9 && bd < 21) return [20, ((bd - 7) % 2 === 0) ? 20 : 0];      // T20 + P20 alt from tomorrow
+  return [20, 0];                                                            // T20 only
+}
+
+// Option B — "T15 wk": T10 alt day 1 (bd 7), T15 for rest of first alt week (bd 8-13), T20 from bd 14.
+export function doseUptitrate15w(d) {
+  if (d < 0) return [0, 40];
+  if (d === 0) return [5, 20];
+  if (d <= 7) return [10, 20];
+  if (d < BRIDGE_START) return [10, 0];
+  const bd = d - BRIDGE_START;
+  if (bd < 7) return [10, 20];                                              // 7d daily P20 + T10
+  if (bd === 7) return [10, 20];                                             // alt day 1: T10 (yesterday)
+  if (bd >= 8 && bd < 14) return [15, ((bd - 7) % 2 === 0) ? 20 : 0];      // T15 + P20 alt (rest of wk1)
+  if (bd >= 14 && bd < 21) return [20, ((bd - 14) % 2 === 0) ? 20 : 0];    // T20 + P20 alt (wk2)
+  return [20, 0];                                                            // T20 only
 }
 
 // P20 step-down: 7d daily → 8d every other day → 6d every 3rd day
@@ -86,9 +102,14 @@ const bridgeBoost14  = makeBridgeBoost(26);
 const bridgeStressSD = makeBridgeStress(21, 0.73, 5, 4.5, 2.5);
 const bridgeBoostSD  = makeBridgeBoost(24);
 
-// Uptitrate: same 21d coverage as alt14, but higher Trintellix dose softens the cliff
-const bridgeStressUT = makeBridgeStress(21, 0.65, 5, 5, 2.5);
+// T20 fast: T20 from bd 9, higher SERT means softer cliff
+const bridgeStressUT = makeBridgeStress(21, 0.60, 5, 5, 2.5);
 const bridgeBoostUT  = makeBridgeBoost(26);
+
+// T15 wk: T15 first week then T20, slightly higher stress than T20 fast
+// (less SERT coverage during first alt week)
+const bridgeStressUT15w = makeBridgeStress(21, 0.65, 5, 5, 2.5);
+const bridgeBoostUT15w  = makeBridgeBoost(26);
 
 // ── Timeline generators ──
 
@@ -123,4 +144,8 @@ export function genBridgeTimelineSD(n = 90, cypBase) {
 
 export function genBridgeTimelineUT(n = 90, cypBase) {
   return genTimeline(n, doseUptitrate, bridgeStressUT, bridgeBoostUT, cypBase);
+}
+
+export function genBridgeTimelineUT15w(n = 90, cypBase) {
+  return genTimeline(n, doseUptitrate15w, bridgeStressUT15w, bridgeBoostUT15w, cypBase);
 }

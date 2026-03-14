@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { genTimeline, computeAll, getDose, computePD, TODAY_N } from "@/components/tracker/pkEngine";
-import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
+import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, genBridgeTimelineUT15w, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
 import TodayTab      from "@/components/tracker/TodayTab";
 
 import PDTab         from "@/components/tracker/PDTab";
@@ -32,7 +32,7 @@ export default function Tracker() {
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
   const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown" | "uptitrate"
-  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: true, sd: false, ut: false });
+  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: true, sd: false, ut: false, ut15: false });
   const [cypFactor, setCypFactor] = useState(2.2);
 
   const tl     = useMemo(() => genTimeline(90, cypFactor), [cypFactor]);
@@ -40,7 +40,8 @@ export default function Tracker() {
   const tlBridge14 = useMemo(() => genBridgeTimeline14(90, cypFactor), [cypFactor]);
   const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90, cypFactor), [cypFactor]);
   const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90, cypFactor), [cypFactor]);
-  const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT]);
+  const tlBridgeUT15w = useMemo(() => genBridgeTimelineUT15w(90, cypFactor), [cypFactor]);
+  const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT, ut15: tlBridgeUT15w }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT, tlBridgeUT15w]);
   const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT };
   const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
