@@ -92,10 +92,10 @@ const bridgeBoostUT  = makeBridgeBoost(26);
 
 // ── Timeline generators ──
 
-function genTimeline(n, doseFn, stressFn, boostFn) {
+function genTimeline(n, doseFn, stressFn, boostFn, cypBase) {
   const data = [];
   for (let i = 0; i <= n; i += 0.5) {
-    const result = computeAll(i, doseFn, computePD);
+    const result = computeAll(i, doseFn, computePD, cypBase);
     const extra = stressFn(i);
     const boost = boostFn(i, result.fE);
     const adjustedWB = Math.max(0, Math.min(100, result.wellbeing - extra + boost));
@@ -109,18 +109,18 @@ function genTimeline(n, doseFn, stressFn, boostFn) {
   return data;
 }
 
-export function genBridgeTimeline(n = 90) {
-  return genTimeline(n, doseTaper, bridgeStress, bridgeBoost);
+export function genBridgeTimeline(n = 90, cypBase) {
+  return genTimeline(n, doseTaper, bridgeStress, bridgeBoost, cypBase);
 }
 
-export function genBridgeTimeline14(n = 90) {
-  return genTimeline(n, doseTaper14, bridgeStress14, bridgeBoost14);
+export function genBridgeTimeline14(n = 90, cypBase) {
+  return genTimeline(n, doseTaper14, bridgeStress14, bridgeBoost14, cypBase);
 }
 
-export function genBridgeTimelineSD(n = 90) {
-  return genTimeline(n, doseStepdown, bridgeStressSD, bridgeBoostSD);
+export function genBridgeTimelineSD(n = 90, cypBase) {
+  return genTimeline(n, doseStepdown, bridgeStressSD, bridgeBoostSD, cypBase);
 }
 
-export function genBridgeTimelineUT(n = 90) {
-  return genTimeline(n, doseUptitrate, bridgeStressUT, bridgeBoostUT);
+export function genBridgeTimelineUT(n = 90, cypBase) {
+  return genTimeline(n, doseUptitrate, bridgeStressUT, bridgeBoostUT, cypBase);
 }

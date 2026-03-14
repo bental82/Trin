@@ -24,8 +24,8 @@ const SERT_HILL_N        = 2;    // Hill coefficient — fitted to PET dose-resp
 
 // Wellbutrin (bupropion) is a strong CYP2D6 inhibitor taken continuously.
 // Per Chen et al. (2013, PMC3775155): AUC +128% (~2.28x), Cmax +114% (~2.14x).
-// This is a constant, persistent effect independent of Prozac.
-const WELLBUTRIN_CYP_FACTOR = 2.2;
+// cypBase parameter allows exploring the 1.5×–2.2× uncertainty range.
+export const DEFAULT_CYP_BASE = 2.2;
 
 // Prozac steady-state accumulation (pre-switch baseline)
 const PROZAC_SS_FLUOX    = 40 / (1 - Math.pow(0.5, 24 / FLUOX_HALFLIFE));
@@ -52,7 +52,7 @@ export function fluoxEquivAt(h, doseFn = getDose) {
   return (level / PROZAC_SS_FLUOX) * 40;
 }
 
-export function pkCalc(day, doseFn = getDose) {
+export function pkCalc(day, doseFn = getDose, cypBase = DEFAULT_CYP_BASE) {
   const h = day * 24;
   const maxDay = Math.floor(day);
 
@@ -73,7 +73,7 @@ export function pkCalc(day, doseFn = getDose) {
   // Prozac adds additional inhibition on top during overlap period.
   // Cap at 2.8x — CYP2D6 saturates well before 3.5x when both inhibitors present.
   const prozacCypContrib = Math.min(1.0, (fluoxEquiv / 40) * 1.0);
-  const totalCypBoost    = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + prozacCypContrib * 0.4);
+  const totalCypBoost    = Math.min(2.8, cypBase + prozacCypContrib * 0.4);
 
   // Vortioxetine accumulation (affected by CYP2D6 at time of each dose)
   let vortLevel = 0;
@@ -82,7 +82,7 @@ export function pkCalc(day, doseFn = getDose) {
     if (vortDose > 0 && h > d * 24) {
       const elapsed = h - d * 24;
       const doseTimeFluox = fluoxEquivAt(d * 24, doseFn);
-      const doseTimeCyp   = Math.min(2.8, WELLBUTRIN_CYP_FACTOR + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
+      const doseTimeCyp   = Math.min(2.8, cypBase + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
       // CYP inhibition reduces clearance → extends t½ and proportionally increases AUC.
       // Using t½ × CYP factor (not dose × CYP) avoids double-counting.
       // At CYP=2.2 (bupropion alone): t½ ≈ 145h, AUC ≈ 2.2× — matches CYP2D6 PM literature.
@@ -174,12 +174,17 @@ function computePkRaw(pk) {
   );
 }
 
-// Precompute steady-state reference once (day 200 with default dose)
-const STEADY_STATE_PK = pkCalc(200);
-const STEADY_STATE_PK_MAX = computePkRaw(STEADY_STATE_PK);
+// Precompute steady-state reference for default CYP; cache others on demand
+const _ssCache = {};
+function getSteadyStatePkMax(cypBase = DEFAULT_CYP_BASE) {
+  if (!_ssCache[cypBase]) {
+    _ssCache[cypBase] = computePkRaw(pkCalc(200, getDose, cypBase));
+  }
+  return _ssCache[cypBase];
+}
 
-export function computeAll(day, doseFn = getDose, pdFn = computePD) {
-  const pk = pkCalc(day, doseFn);
+export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DEFAULT_CYP_BASE) {
+  const pk = pkCalc(day, doseFn, cypBase);
   const pd = pdFn(day);
 
   // PK score: always normalize against 10mg steady state so higher doses
@@ -187,7 +192,7 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   // Clinical data (pooled 6 trials): 20mg → +1 MADRS point vs 10mg,
   // 51.4% vs 46.0% response, onset 4 weeks earlier (Thase 2023, Baldwin 2016).
   const pkRaw = computePkRaw(pk);
-  const pkScore = (pkRaw / Math.max(STEADY_STATE_PK_MAX, 1)) * 100;
+  const pkScore = (pkRaw / Math.max(getSteadyStatePkMax(cypBase), 1)) * 100;
 
   const pdScore = pd.autorecept * 0.25 + pd.gabaDisinhib * 0.20 + pd.circadian * 0.10 + pd.bdnf * 0.20 + pd.glymphatic * 0.10 + pd.dmn * 0.15;
   const stress = (pd.norfluoxStress || 0) + (pd.cypStress || 0);
@@ -207,11 +212,11 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
 }
 
-export function genTimeline(n = 56) {
+export function genTimeline(n = 56, cypBase = DEFAULT_CYP_BASE) {
   const data = [];
   const s = new Date(START);
   for (let i = 0; i <= n; i += 0.5) {
-    const w = computeAll(i);
+    const w = computeAll(i, getDose, computePD, cypBase);
     const dt = new Date(s);
     dt.setDate(s.getDate() + Math.floor(i));
     dt.setHours(s.getHours() + (i % 1) * 24);

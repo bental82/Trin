@@ -26,8 +26,8 @@ function makeBridgeBoost(coverageDays) {
 
 // ── Wellbeing calculator ──
 
-function wb(day, doseFn, pdFn, extraStressFn, boostFn) {
-  const result = computeAll(day, doseFn, pdFn);
+function wb(day, doseFn, pdFn, extraStressFn, boostFn, cypBase) {
+  const result = computeAll(day, doseFn, pdFn, cypBase);
   const extraStress = extraStressFn ? extraStressFn(day) : 0;
   const boost = boostFn ? boostFn(day, result) : 0;
   const adjusted = Math.max(0, Math.min(100, result.wellbeing - extraStress + boost));
@@ -35,9 +35,9 @@ function wb(day, doseFn, pdFn, extraStressFn, boostFn) {
 }
 
 const N = 75;
-function gen(doseFn, pdFn, extraStressFn, boostFn) {
+function gen(doseFn, pdFn, extraStressFn, boostFn, cypBase) {
   const data = [];
-  for (let i = 0; i <= N; i++) data.push(wb(i, doseFn, pdFn, extraStressFn, boostFn));
+  for (let i = 0; i <= N; i++) data.push(wb(i, doseFn, pdFn, extraStressFn, boostFn, cypBase));
   return data;
 }
 
@@ -64,7 +64,7 @@ function Tip({ active, payload }) {
   );
 }
 
-export default function BridgeTab({ bridgeShow, setBridgeShow }) {
+export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) {
   const [extra, setExtra] = useState({ pk: false, pd: false, st: false });
   const togExtra = k => setExtra(s => ({ ...s, [k]: !s[k] }));
   const togBridge = k => setBridgeShow(s => ({ ...s, [k]: !s[k] }));
@@ -81,11 +81,11 @@ export default function BridgeTab({ bridgeShow, setBridgeShow }) {
   const boostSD    = useMemo(() => makeBridgeBoost(24), []);
   const boostUT    = useMemo(() => makeBridgeBoost(26), []);
 
-  const tl      = useMemo(() => gen(getDose, computePD), []);
-  const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper), [stressTaper, boostTaper]);
-  const tlTpr14 = useMemo(() => gen(doseTaper14, computePD, stressTpr14, boostTpr14), [stressTpr14, boostTpr14]);
-  const tlSD    = useMemo(() => gen(doseStepdown, computePD, stressSD, boostSD), [stressSD, boostSD]);
-  const tlUT    = useMemo(() => gen(doseUptitrate, computePD, stressUT, boostUT), [stressUT, boostUT]);
+  const tl      = useMemo(() => gen(getDose, computePD, null, null, cypBase), [cypBase]);
+  const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper, cypBase), [stressTaper, boostTaper, cypBase]);
+  const tlTpr14 = useMemo(() => gen(doseTaper14, computePD, stressTpr14, boostTpr14, cypBase), [stressTpr14, boostTpr14, cypBase]);
+  const tlSD    = useMemo(() => gen(doseStepdown, computePD, stressSD, boostSD, cypBase), [stressSD, boostSD, cypBase]);
+  const tlUT    = useMemo(() => gen(doseUptitrate, computePD, stressUT, boostUT, cypBase), [stressUT, boostUT, cypBase]);
 
   const data = useMemo(() => tl.map((d, i) => ({
     ...d,

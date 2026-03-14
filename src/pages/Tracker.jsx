@@ -8,7 +8,6 @@ import SERTTab       from "@/components/tracker/SERTTab";
 import ReceptorTab   from "@/components/tracker/ReceptorTab";
 import PlasmaTab     from "@/components/tracker/PlasmaTab";
 import LearnTab      from "@/components/tracker/LearnTab";
-import DiaryTab      from "@/components/tracker/DiaryTab";
 import GlossaryTab   from "@/components/tracker/GlossaryTab";
 import BridgeTab     from "@/components/tracker/BridgeTab";
 import { Pill } from "lucide-react";
@@ -25,7 +24,6 @@ const DATA_TABS = [
 const INFO_TABS = [
   { id: "learn",    label: "📖 Learn"    },
   { id: "glossary", label: "🔤 Glossary" },
-  { id: "diary",    label: "📝 Diary"    },
 ];
 
 export default function Tracker() {
@@ -36,20 +34,21 @@ export default function Tracker() {
   const [viewDay,  setViewDay]  = useState(TODAY_N);
   const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown" | "uptitrate"
   const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: true, sd: false, ut: false });
+  const [cypFactor, setCypFactor] = useState(2.2);
 
-  const tl     = useMemo(() => genTimeline(90), []);
-  const tlBridge = useMemo(() => genBridgeTimeline(90), []);
-  const tlBridge14 = useMemo(() => genBridgeTimeline14(90), []);
-  const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90), []);
-  const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90), []);
+  const tl     = useMemo(() => genTimeline(90, cypFactor), [cypFactor]);
+  const tlBridge = useMemo(() => genBridgeTimeline(90, cypFactor), [cypFactor]);
+  const tlBridge14 = useMemo(() => genBridgeTimeline14(90, cypFactor), [cypFactor]);
+  const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90, cypFactor), [cypFactor]);
+  const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90, cypFactor), [cypFactor]);
   const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT]);
   const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT };
   const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
-  const tW     = useMemo(() => computeAll(tN), [tN]);
+  const tW     = useMemo(() => computeAll(tN, getDose, computePD, cypFactor), [tN, cypFactor]);
   const peakWB = useMemo(() => tl.reduce((b, d) => d.wellbeing > b.wellbeing ? d : b, tl[0]), [tl]);
   const tlM    = useMemo(() => tl.filter(d => d.day % 1 === 0), [tl]);
-  const day1WB = useMemo(() => computeAll(0).wellbeing, []);
+  const day1WB = useMemo(() => computeAll(0, getDose, computePD, cypFactor).wellbeing, [cypFactor]);
 
   const altDaysWB = useMemo(() => {
     const bd = tlActive.find(d => d.day === tN);
@@ -263,6 +262,23 @@ export default function Tracker() {
         >›</button>
       </div>
 
+      {/* CYP2D6 SLIDER */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        background: "#ffffff", borderBottom: "1px solid #e2e8f0",
+        padding: "6px 16px",
+      }}>
+        <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>CYP2D6</span>
+        <span style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{cypFactor.toFixed(1)}×</span>
+        <input
+          type="range" min="1.5" max="2.2" step="0.1"
+          value={cypFactor}
+          onChange={e => setCypFactor(parseFloat(e.target.value))}
+          style={{ width: 120, accentColor: "#a78bfa" }}
+        />
+        <span style={{ fontSize: 10, color: "#94a3b8" }}>1.5×–2.2×</span>
+      </div>
+
       {/* TAB GROUP SWITCHER */}
       <div style={{
         background: "#ffffff",
@@ -337,10 +353,9 @@ export default function Tracker() {
         {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
-        {tab === "bridge"   && <BridgeTab bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "bridge"   && <BridgeTab bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} cypBase={cypFactor} />}
         {tab === "learn"    && <LearnTab tN={tN} tW={tW} />}
         {tab === "glossary" && <GlossaryTab />}
-        {tab === "diary"    && <DiaryTab />}
       </div>
 
       {/* FOOTER */}
