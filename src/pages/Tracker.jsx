@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { genTimeline, computeAll, getDose, computePD, TODAY_N } from "@/components/tracker/pkEngine";
 import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
 import TodayTab      from "@/components/tracker/TodayTab";
-import WellbeingTab  from "@/components/tracker/WellbeingTab";
+
 import PDTab         from "@/components/tracker/PDTab";
 import SERTTab       from "@/components/tracker/SERTTab";
 import ReceptorTab   from "@/components/tracker/ReceptorTab";
@@ -13,12 +13,11 @@ import BridgeTab     from "@/components/tracker/BridgeTab";
 import { Pill } from "lucide-react";
 
 const DATA_TABS = [
-  { id: "wellbeing",label: "🧠 Wellbeing" },
+  { id: "bridge",   label: "🧠 Wellbeing" },
   { id: "pd",       label: "PD Curves"   },
   { id: "sert",     label: "SERT"        },
   { id: "rec",      label: "5-HT"        },
   { id: "plasma",   label: "Plasma"      },
-  { id: "bridge",   label: "🌉 Bridge"   },
 ];
 
 const INFO_TABS = [
@@ -47,7 +46,7 @@ export default function Tracker() {
   const tN     = viewDay;
   const tW     = useMemo(() => computeAll(tN, getDose, computePD, cypFactor), [tN, cypFactor]);
   const peakWB = useMemo(() => tl.reduce((b, d) => d.wellbeing > b.wellbeing ? d : b, tl[0]), [tl]);
-  const tlM    = useMemo(() => tl.filter(d => d.day % 1 === 0), [tl]);
+
   const day1WB = useMemo(() => computeAll(0, getDose, computePD, cypFactor).wellbeing, [cypFactor]);
 
   // Bridge data point for the current day — same fields as tW
@@ -313,7 +312,7 @@ export default function Tracker() {
               key={g}
               onClick={() => {
                 setTabGroup(g);
-                if (g === "data") setTab("wellbeing");
+                if (g === "data") setTab("bridge");
                 else setTab("learn");
               }}
               style={{
@@ -357,7 +356,6 @@ export default function Tracker() {
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
         {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} strategyLabel={strategyLabel} />}
-        {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} />}
         {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
