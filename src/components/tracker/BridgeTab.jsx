@@ -44,11 +44,19 @@ function gen(doseFn, pdFn, extraStressFn, boostFn) {
 // ── Tooltip ──
 function Tip({ active, payload }) {
   if (!active || !payload?.length) return null;
-  const day = payload[0]?.payload?.day;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+  const day = d.day;
+  const dt = new Date("2026-02-12");
+  dt.setDate(dt.getDate() + Math.floor(day));
+  const ds = dt.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
   const skip = new Set(["wbF", "stF", "tpF", "tp14F", "sdF", "utF"]);
   return (
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,.1)", maxWidth: 240 }}>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: "#334155" }}>Day {(day ?? 0) + 1}</div>
+      <div style={{ fontWeight: 700, marginBottom: 2, color: "#0891b2" }}>Day {(day ?? 0) + 1} — {ds}</div>
+      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>
+        Rx: {d.vN}mg vort + {d.pN}mg prozac
+      </div>
       {payload.filter(p => p.value != null && !skip.has(p.name)).map((p, i) => (
         <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "1px 0" }}>
           <span style={{ color: p.color }}>{p.name}</span>
