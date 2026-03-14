@@ -138,7 +138,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
         <Btn on={bridgeShow.alt8} onClick={() => togBridge("alt8")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt 8d</Btn>
         <Btn on={bridgeShow.alt14} onClick={() => togBridge("alt14")} color="#7c3aed" bg="#f5f3ff">{"\u{1F48A}"} P20+alt 14d</Btn>
         <Btn on={bridgeShow.sd} onClick={() => togBridge("sd")} color="#d97706" bg="#fffbeb">{"\u{1F48A}"} Step-down</Btn>
-        <Btn on={bridgeShow.ut} onClick={() => togBridge("ut")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} 15{"\u2192"}20</Btn>
+        <Btn on={bridgeShow.ut} onClick={() => togBridge("ut")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} T20 early</Btn>
         <Btn on={extra.pk} onClick={() => togExtra("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
         <Btn on={extra.pd} onClick={() => togExtra("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
         <Btn on={extra.st} onClick={() => togExtra("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
@@ -184,8 +184,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           )}
           {bridgeShow.ut && (
             <>
-              <ReferenceLine x={BRIDGE_START + 7} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "T15 alt", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
-              <ReferenceLine x={BRIDGE_START + 14} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "\u2192T20", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
+              <ReferenceLine x={BRIDGE_START + 7} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "T20 alt", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
               <ReferenceLine x={BRIDGE_START + 21} stroke="#e11d4820" strokeDasharray="3 3" label={{ value: "T20 only", fill: "#e11d4860", fontSize: 7, position: "insideBottom" }} />
             </>
           )}
@@ -201,7 +200,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           {bridgeShow.alt8 && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 8d" connectNulls={false} />}
           {bridgeShow.alt14 && <Line type="monotone" dataKey="taper14WB" stroke="#7c3aed" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 14d" connectNulls={false} />}
           {bridgeShow.sd && <Line type="monotone" dataKey="sdWB" stroke="#d97706" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="Step-down" connectNulls={false} />}
-          {bridgeShow.ut && <Line type="monotone" dataKey="utWB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="15\u219220mg" connectNulls={false} />}
+          {bridgeShow.ut && <Line type="monotone" dataKey="utWB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="T20 early" connectNulls={false} />}
           {extra.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
           {extra.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
           {extra.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Stress" />}
@@ -233,7 +232,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
               {bridgeShow.alt8 && <Line type="monotone" dataKey="dTaper" stroke="#0891b2" strokeWidth={2.5} dot={false} name="P20+alt 8d" connectNulls={false} />}
               {bridgeShow.alt14 && <Line type="monotone" dataKey="dTaper14" stroke="#7c3aed" strokeWidth={2.5} dot={false} name="P20+alt 14d" connectNulls={false} />}
               {bridgeShow.sd && <Line type="monotone" dataKey="dSD" stroke="#d97706" strokeWidth={2.5} dot={false} name="Step-down" connectNulls={false} />}
-              {bridgeShow.ut && <Line type="monotone" dataKey="dUT" stroke="#e11d48" strokeWidth={2.5} dot={false} name="15\u219220mg" connectNulls={false} />}
+              {bridgeShow.ut && <Line type="monotone" dataKey="dUT" stroke="#e11d48" strokeWidth={2.5} dot={false} name="T20 early" connectNulls={false} />}
               <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -254,7 +253,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           { label: "STEP-DOWN", sub: "7d+8d+6d", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
             val: todayD ? (tlSD.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
             note: `Dip ${minSD.wellbeing.toFixed(1)}`, nc: minSD.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.sd },
-          { label: "15\u219220", sub: "T15+T20 alt", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
+          { label: "T20 EARLY", sub: "T20 from bridge", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
             val: todayD ? (tlUT.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
             note: `Dip ${minUT.wellbeing.toFixed(1)}`, nc: minUT.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.ut },
         ].map((c, i) => (
@@ -306,12 +305,11 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
             <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>13 doses · gradual step-down</div>
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: "#e11d48", marginBottom: 3 }}>15{"\u2192"}20mg</div>
-            <div style={{ color: "#64748b" }}>T15+P20 daily × 7d</div>
-            <div style={{ color: "#64748b" }}>T15+P20 q2d × 7d</div>
-            <div style={{ color: "#64748b" }}>T20+P20 q2d × 7d</div>
+            <div style={{ fontWeight: 700, color: "#e11d48", marginBottom: 3 }}>T20 early</div>
+            <div style={{ color: "#64748b" }}>T20+P20 daily × 7d</div>
+            <div style={{ color: "#64748b" }}>T20+P20 q2d × 14d</div>
             <div style={{ color: "#64748b" }}>Then T20 only</div>
-            <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>14 doses · uptitrate + taper</div>
+            <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>14 doses · T20 steady by bridge end</div>
           </div>
         </div>
       </div>
@@ -325,7 +323,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           <br /><br />
           <b>Step-down</b> — 21 ימי כיסוי (7d רציף + 8d כל יום שני + 6d כל יום שלישי). ירידה הדרגתית בתלת-שלבים. 13 מנות. נחיתה הכי חלקה מבחינת קצב ירידת fE.
           <br /><br />
-          <b>15{"\u2192"}20mg</b> — אופציית uptitrate: שבוע ראשון T15 + P20 alt, שבוע שני T20 + P20 alt, ואז T20 בלבד. מכסה את חוסר הוודאות ב-CYP2D6 (1.5×–2.2×) ונותן SERT 83–90% בטווח המלא. היתרון: מגיע למינון אופטימלי תוך כדי הגשר.
+          <b>T20 early</b> — T20 מרגע תחילת הגשר: 7 ימי P20+T20 רציף, ואז 14 ימי alt. היתרון: T20 מצטבר לאורך 21 יום (~7.6 מחציות חיים) ומגיע ל-steady state מלא עוד לפני שהגשר נגמר. SERT 88–92% מ-T20 לבד. אפס פער בכיסוי.
           <br /><br />
           <b>כלל אצבע:</b> alt days שובר את דפוס ההצטברות. step-down מוסיף שלב שלישי (q3d) שמאט את הירידה עוד יותר.
         </div>

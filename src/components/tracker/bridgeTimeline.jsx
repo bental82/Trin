@@ -27,17 +27,17 @@ export function doseTaper14(d) {
   return [10, 0];
 }
 
-// Uptitrate: 7d daily P20+T15, then 14d alt (wk1 T15, wk2 T20), then T20 only
+// Uptitrate: T20 from bridge start to maximize accumulation during bridge cover.
+// 7d daily P20+T20, then 14d alt P20+T20, then T20 only (already at steady state).
 export function doseUptitrate(d) {
   if (d < 0) return [0, 40];
   if (d === 0) return [5, 20];
   if (d <= 7) return [10, 20];
   if (d < BRIDGE_START) return [10, 0];
   const bd = d - BRIDGE_START;
-  if (bd < 7) return [15, 20];                                              // 7d daily P20 + T15
-  if (bd >= 7 && bd < 14) return [15, ((bd - 7) % 2 === 0) ? 20 : 0];      // alt wk1: T15
-  if (bd >= 14 && bd < 21) return [20, ((bd - 14) % 2 === 0) ? 20 : 0];    // alt wk2: T20
-  return [20, 0];
+  if (bd < 7) return [20, 20];                                              // 7d daily P20 + T20
+  if (bd >= 7 && bd < 21) return [20, ((bd - 7) % 2 === 0) ? 20 : 0];      // 14d alt: T20
+  return [20, 0];                                                            // T20 only — full steady state
 }
 
 // P20 step-down: 7d daily → 8d every other day → 6d every 3rd day
