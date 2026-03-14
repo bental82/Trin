@@ -3,7 +3,7 @@ import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import ChartTooltip from "./ChartTooltip";
+import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import { cleanZeroLine } from "./TimeRangeSelector";
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
@@ -39,7 +39,7 @@ export default function PlasmaTab({ tl, tN, tlAll, bridgeShow, setBridgeShow }) 
           <XAxis dataKey="day" type="number" tick={{ fill: "#475569", fontSize: 11 }} tickFormatter={v => "D" + (v + 1)} stroke="rgba(100,200,220,.08)" domain={["dataMin", "dataMax"]} />
           <YAxis yAxisId="mg" tick={{ fill: "#475569", fontSize: 11 }} tickFormatter={v => v + "mg"} stroke="rgba(100,200,220,.08)" />
           <YAxis yAxisId="f" orientation="right" domain={[0, 4]} tick={{ fill: "#475569", fontSize: 11 }} tickFormatter={v => v + "×"} stroke="rgba(100,200,220,.08)" />
-          <Tooltip trigger="click" content={<ChartTooltip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} wrapperStyle={{ pointerEvents: "none", zIndex: 1000 }} offset={20} allowEscapeViewBox={{ x: true, y: true }} />
+          <Tooltip {...TOOLTIP_PROPS} content={<ChartTooltip />} />
           <ReferenceLine x={tN} stroke="rgba(239,68,68,.7)" strokeDasharray="3 3" yAxisId="mg" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           <Customized component={<TodayHitArea tN={tN} onToggle={() => setShowToday(v => !v)} />} />
           <Line yAxisId="mg" type="monotone" dataKey="fE"  stroke="#f97316" strokeWidth={2}   dot={false} name="Fluoxetine equiv" connectNulls={false} />

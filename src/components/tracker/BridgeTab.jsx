@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { getDose, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
 import { BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate } from "@/components/tracker/bridgeTimeline";
+import { TOOLTIP_PROPS } from "@/components/tracker/ChartTooltip";
 
 // ── Bridge stress curves ──
 
@@ -42,7 +43,7 @@ function gen(doseFn, pdFn, extraStressFn, boostFn, cypBase) {
 }
 
 // ── Tooltip ──
-function Tip({ active, payload }) {
+function Tip({ active, payload, isDelta }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
@@ -52,12 +53,14 @@ function Tip({ active, payload }) {
   const ds = dt.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
   const skip = new Set(["wbF", "stF", "tpF", "tp14F", "sdF", "utF"]);
   return (
-    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,.1)", maxWidth: 240 }}>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: "#0891b2" }}>Day {(day ?? 0) + 1} — {ds}</div>
+    <div style={{ background: "#ffffffee", border: "1px solid #e2e8f0", borderRadius: 10, padding: "8px 12px", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,.08)", maxWidth: 240, backdropFilter: "blur(6px)" }}>
+      <div style={{ fontWeight: 700, marginBottom: 3, color: "#0891b2" }}>Day {(day ?? 0) + 1} — {ds}</div>
       {payload.filter(p => p.value != null && !skip.has(p.name)).map((p, i) => (
         <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "1px 0" }}>
           <span style={{ color: p.color }}>{p.name}</span>
-          <span style={{ fontWeight: 600, color: p.color }}>{p.value.toFixed(1)}</span>
+          <span style={{ fontWeight: 600, color: p.color }}>
+            {isDelta ? (p.value >= 0 ? "+" : "") + p.value.toFixed(1) : p.value.toFixed(1)}
+          </span>
         </div>
       ))}
     </div>
@@ -66,6 +69,7 @@ function Tip({ active, payload }) {
 
 export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) {
   const [extra, setExtra] = useState({ pk: false, pd: false, st: false });
+  const [deltaMode, setDeltaMode] = useState(false);
   const togExtra = k => setExtra(s => ({ ...s, [k]: !s[k] }));
   const togBridge = k => setBridgeShow(s => ({ ...s, [k]: !s[k] }));
 
@@ -95,8 +99,23 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
     utWB: tlUT[i]?.wellbeing ?? null,
   })), [tl, tlTaper, tlTpr14, tlSD, tlUT]);
 
+  // Delta data: difference from Actual for each strategy
+  const deltaData = useMemo(() => data.map(d => ({
+    day: d.day,
+    dTaper: d.taperWB != null ? d.taperWB - d.wellbeing : null,
+    dTaper14: d.taper14WB != null ? d.taper14WB - d.wellbeing : null,
+    dSD: d.sdWB != null ? d.sdWB - d.wellbeing : null,
+    dUT: d.utWB != null ? d.utWB - d.wellbeing : null,
+  })), [data]);
+
   const todayD = data.find(d => d.day === todayN);
   const minA = tl.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tl[0]);
+
+  // Compute actual min dip for each strategy
+  const minTaper = tlTaper.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlTaper[0]);
+  const minTpr14 = tlTpr14.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlTpr14[0]);
+  const minSD    = tlSD.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlSD[0]);
+  const minUT    = tlUT.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlUT[0]);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
     <button onClick={onClick} style={{
@@ -123,8 +142,10 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
         <Btn on={extra.pk} onClick={() => togExtra("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
         <Btn on={extra.pd} onClick={() => togExtra("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
         <Btn on={extra.st} onClick={() => togExtra("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
+        <Btn on={deltaMode} onClick={() => setDeltaMode(v => !v)} color="#334155" bg="#f1f5f9">{"\u0394"} Delta</Btn>
       </div>
 
+      {/* Main absolute chart */}
       <ResponsiveContainer width="100%" height={370}>
         <ComposedChart data={data} margin={{ top: 5, right: 8, left: -14, bottom: 5 }}>
           <defs>
@@ -138,7 +159,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 10 }} tickFormatter={v => "D" + (v + 1)} stroke="#e2e8f0" domain={[0, N]} interval={4} />
           <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 10 }} stroke="#e2e8f0" />
-          <Tooltip trigger="click" content={<Tip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} />
+          <Tooltip {...TOOLTIP_PROPS} content={<Tip isDelta={false} />} />
 
           <ReferenceLine x={0} stroke="#fbbf2440" strokeDasharray="4 3" label={{ value: "Start", fill: "#fbbf2460", fontSize: 7, position: "top" }} />
           <ReferenceLine x={todayN} stroke="#ef4444b0" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
@@ -189,19 +210,53 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
         </ComposedChart>
       </ResponsiveContainer>
 
+      {/* Delta chart — difference from Actual */}
+      {deltaMode && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ padding: "0 6px", marginBottom: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>
+              {"\u0394"} Difference from Actual
+            </div>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: "#64748b" }}>
+              Positive = strategy is better than no bridge
+            </p>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <ComposedChart data={deltaData} margin={{ top: 5, right: 8, left: -14, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 10 }} tickFormatter={v => "D" + (v + 1)} stroke="#e2e8f0" domain={[0, N]} interval={4} />
+              <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#e2e8f0" />
+              <Tooltip {...TOOLTIP_PROPS} content={<Tip isDelta={true} />} />
+              <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
+              <ReferenceLine x={todayN} stroke="#ef4444b0" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
+              <ReferenceLine x={BRIDGE_START} stroke="#fbbf2460" strokeDasharray="4 3" label={{ value: "Bridge", fill: "#fbbf2480", fontSize: 8, position: "top" }} />
+              {bridgeShow.alt8 && <Line type="monotone" dataKey="dTaper" stroke="#0891b2" strokeWidth={2.5} dot={false} name="P20+alt 8d" connectNulls={false} />}
+              {bridgeShow.alt14 && <Line type="monotone" dataKey="dTaper14" stroke="#7c3aed" strokeWidth={2.5} dot={false} name="P20+alt 14d" connectNulls={false} />}
+              {bridgeShow.sd && <Line type="monotone" dataKey="dSD" stroke="#d97706" strokeWidth={2.5} dot={false} name="Step-down" connectNulls={false} />}
+              {bridgeShow.ut && <Line type="monotone" dataKey="dUT" stroke="#e11d48" strokeWidth={2.5} dot={false} name="15\u219220mg" connectNulls={false} />}
+              <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* Strategy cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginTop: 12 }}>
         {[
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
           { label: "ALT 8d", sub: "7d+8d q2d", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
-            val: tlTaper.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: bridgeShow.alt8 },
+            val: todayD ? (tlTaper.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
+            note: `Dip ${minTaper.wellbeing.toFixed(1)}`, nc: minTaper.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.alt8 },
           { label: "ALT 14d", sub: "7d+14d q2d", color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd",
-            val: tlTpr14.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.6", nc: "#16a34a", on: bridgeShow.alt14 },
+            val: todayD ? (tlTpr14.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
+            note: `Dip ${minTpr14.wellbeing.toFixed(1)}`, nc: minTpr14.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.alt14 },
           { label: "STEP-DOWN", sub: "7d+8d+6d", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
-            val: tlSD.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.7", nc: "#16a34a", on: bridgeShow.sd },
+            val: todayD ? (tlSD.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
+            note: `Dip ${minSD.wellbeing.toFixed(1)}`, nc: minSD.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.sd },
           { label: "15\u219220", sub: "T15+T20 alt", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
-            val: tlUT.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.65", nc: "#16a34a", on: bridgeShow.ut },
+            val: todayD ? (tlUT.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
+            note: `Dip ${minUT.wellbeing.toFixed(1)}`, nc: minUT.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.ut },
         ].map((c, i) => (
           <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>

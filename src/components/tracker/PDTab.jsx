@@ -3,7 +3,7 @@ import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import ChartTooltip from "./ChartTooltip";
+import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from "./TimeRangeSelector";
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
@@ -28,7 +28,7 @@ export default function PDTab({ tl, tN, tW }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={xTickFormatter(range)} stroke="#e2e8f0" domain={["dataMin", "dataMax"]} />
           <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={v => v + "%"} stroke="#e2e8f0" />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} wrapperStyle={{ pointerEvents: "none", zIndex: 1000 }} offset={20} allowEscapeViewBox={{ x: true, y: true }} />
+          <Tooltip {...TOOLTIP_PROPS} content={<ChartTooltip />} />
           <ReferenceLine x={tN} stroke="rgba(239,68,68,.7)" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           <Customized component={<TodayHitArea tN={tN} onToggle={() => setShowToday(v => !v)} />} />
           <Line type="monotone" dataKey="gabaDisinhib" stroke="#f97316" strokeWidth={2}   dot={false} name="GABA Disinhibition" connectNulls={false} />
