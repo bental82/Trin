@@ -50,58 +50,67 @@ export default function Tracker() {
   const tlM    = useMemo(() => tl.filter(d => d.day % 1 === 0), [tl]);
   const day1WB = useMemo(() => computeAll(0, getDose, computePD, cypFactor).wellbeing, [cypFactor]);
 
-  const altDaysWB = useMemo(() => {
+  // Bridge data point for the current day — same fields as tW
+  const bW = useMemo(() => {
     const bd = tlActive.find(d => d.day === tN);
-    return bd ? bd.wellbeing : 0;
+    return bd || null;
   }, [tN, tlActive]);
+
+  const strategyLabel = strategy === "alt8" ? "Alt 8d" : strategy === "alt14" ? "Alt 14d" : strategy === "uptitrate" ? "15\u219220" : "Step-down";
+  const bridgeColor = strategy === "alt8" ? "#0891b2" : strategy === "alt14" ? "#7c3aed" : strategy === "uptitrate" ? "#e11d48" : "#d97706";
 
   const statCards = [
     {
       label: "SERT Occupancy",
       value: tW.cS.toFixed(0) + "%",
+      bridgeValue: bW ? bW.cS.toFixed(0) + "%" : null,
       color: "#f0abfc",
+      bridgeColor,
       icon: "🅿️",
       detail: "Combined vortioxetine + residual fluoxetine occupancy of serotonin transporter. Well above the 50% minimum therapeutic threshold.",
     },
     {
       label: "PD Maturation",
       value: tW.pdScore.toFixed(0) + "%",
+      bridgeValue: bW ? bW.pdScore.toFixed(0) + "%" : null,
       color: "#a78bfa",
+      bridgeColor,
       icon: "🧬",
       detail: "Weighted composite of autoreceptor desensitization, GABA disinhibition, circadian remodeling, BDNF, DMN, and glymphatic restoration.",
     },
     {
       label: "Wellbeing Score",
       value: tW.wellbeing.toFixed(1),
+      bridgeValue: bW ? bW.wellbeing.toFixed(1) : null,
       color: "#22c55e",
+      bridgeColor,
       icon: "💚",
       detail: `Model projection: PK ceiling × PD access − transition stress. Peak projected at Day ${Math.round(peakWB.day) + 1} (score ${peakWB.wellbeing.toFixed(0)}).`,
     },
     {
-      label: "Bridge Wellbeing",
-      value: altDaysWB.toFixed(1),
-      color: "#0891b2",
-      icon: "🌉",
-      detail: `Projected wellbeing for selected bridge strategy (${strategy === "alt8" ? "P20+alt 8d" : strategy === "alt14" ? "P20+alt 14d" : strategy === "uptitrate" ? "Uptitrate 15→20" : "Step-down"}).`,
-    },
-    {
       label: "Transition Stress",
       value: tW.stressScore.toFixed(0),
+      bridgeValue: bW ? bW.stressScore.toFixed(0) : null,
       color: "#f97316",
+      bridgeColor,
       icon: "⚡",
       detail: "Temporary destabilization as norfluoxetine (Prozac metabolite, t½≈9d) clears. Expected peak ~D21-28, then resolves weeks 5-6.",
     },
     {
       label: "CYP2D6 Boost",
       value: tW.cyp.toFixed(2) + "×",
+      bridgeValue: bW ? bW.cyp.toFixed(2) + "×" : null,
       color: "#818cf8",
+      bridgeColor,
       icon: "🚰",
       detail: "Liver enzyme inhibition from Wellbutrin + residual Prozac makes each 10mg vortioxetine act like ~21mg. Will settle to ~2.1× as Prozac clears.",
     },
     {
       label: "BDNF / Neuroplasticity",
       value: tW.bdnf.toFixed(0) + "%",
+      bridgeValue: bW ? bW.bdnf.toFixed(0) + "%" : null,
       color: "#34d399",
+      bridgeColor,
       icon: "🌱",
       detail: "Brain-derived neurotrophic factor — the 'grow new wiring' process. Slowest but most powerful. Barely started now; significant changes weeks 4-8.",
     },
@@ -347,7 +356,7 @@ export default function Tracker() {
 
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
-        {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} />}
+        {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} strategyLabel={strategyLabel} />}
         {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} />}
         {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}

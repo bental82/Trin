@@ -9,7 +9,7 @@ const STRATEGIES = [
   { id: "uptitrate", label: "15\u219220", desc: "7d T15 + 14d alt T15\u219220", color: "#e11d48", bg: "#fff1f2", border: "#fda4af" },
 ];
 
-export default function TodayTab({ tN, statCards, strategy, setStrategy }) {
+export default function TodayTab({ tN, statCards, strategy, setStrategy, strategyLabel }) {
   return (
     <div>
       <div style={{ marginBottom: 14 }}>
@@ -51,7 +51,7 @@ export default function TodayTab({ tN, statCards, strategy, setStrategy }) {
       <BridgeStatus tN={tN} strategy={strategy} />
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {statCards.map(c => (
-          <StatCard key={c.label} {...c} />
+          <StatCard key={c.label} {...c} strategyLabel={strategyLabel} />
         ))}
       </div>
     </div>

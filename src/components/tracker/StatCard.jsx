@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-export default function StatCard({ label, value, color, detail, icon }) {
+export default function StatCard({ label, value, color, detail, icon, bridgeValue, bridgeColor, strategyLabel }) {
   const [open, setOpen] = useState(false);
+  const hasBridge = bridgeValue != null && bridgeValue !== value;
 
   return (
     <div
@@ -26,7 +27,16 @@ export default function StatCard({ label, value, color, detail, icon }) {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, color: "#64748b", lineHeight: 1.3 }}>{label}</div>
-          <div style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1.1, marginTop: 2 }}>{value}</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 2 }}>
+            <span style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1.1 }}>{value}</span>
+            {hasBridge && (
+              <>
+                <span style={{ fontSize: 14, color: "#cbd5e1", fontWeight: 400 }}>/</span>
+                <span style={{ fontSize: 22, fontWeight: 700, color: bridgeColor, lineHeight: 1.1, opacity: 0.85 }}>{bridgeValue}</span>
+                <span style={{ fontSize: 10, color: bridgeColor, fontWeight: 600, opacity: 0.7 }}>{strategyLabel}</span>
+              </>
+            )}
+          </div>
         </div>
         <ChevronDown
           size={16}
