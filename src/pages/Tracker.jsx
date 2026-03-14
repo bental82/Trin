@@ -42,7 +42,7 @@ export default function Tracker() {
   const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90, cypFactor), [cypFactor]);
   const tlBridgeUT15w = useMemo(() => genBridgeTimelineUT15w(90, cypFactor), [cypFactor]);
   const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT, ut15: tlBridgeUT15w }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT, tlBridgeUT15w]);
-  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT };
+  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT, ut15wk: tlBridgeUT15w };
   const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
   const tW     = useMemo(() => computeAll(tN, getDose, computePD, cypFactor), [tN, cypFactor]);

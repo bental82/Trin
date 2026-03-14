@@ -114,14 +114,15 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
   })), [data]);
 
   const todayD = data.find(d => d.day === todayN);
-  const minA = tl.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tl[0]);
 
-  // Compute actual min dip for each strategy
-  const minTaper = tlTaper.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlTaper[0]);
-  const minTpr14 = tlTpr14.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlTpr14[0]);
-  const minSD    = tlSD.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlSD[0]);
-  const minUT    = tlUT.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlUT[0]);
-  const minUT15  = tlUT15.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tlUT15[0]);
+  // Compute min dip for each strategy — only in bridge+post-bridge region
+  const minAfterBridge = (arr) => arr.filter(d => d.day >= BRIDGE_START).reduce((m, d) => d.wellbeing < m.wellbeing ? d : m);
+  const minA     = minAfterBridge(tl);
+  const minTaper = minAfterBridge(tlTaper);
+  const minTpr14 = minAfterBridge(tlTpr14);
+  const minSD    = minAfterBridge(tlSD);
+  const minUT    = minAfterBridge(tlUT);
+  const minUT15  = minAfterBridge(tlUT15);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
     <button onClick={onClick} style={{
