@@ -8,8 +8,8 @@ import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from 
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
 
-const STRATEGY_LABELS = { alt8: "P20+alt 8d", alt14: "P20+alt 14d", stepdown: "Step-down" };
-const STRATEGY_COLORS = { alt8: "#0891b2", alt14: "#7c3aed", stepdown: "#d97706" };
+const STRATEGY_LABELS = { alt8: "P20+alt 8d", alt14: "P20+alt 14d", stepdown: "Step-down", uptitrate: "15\u219220mg" };
+const STRATEGY_COLORS = { alt8: "#0891b2", alt14: "#7c3aed", stepdown: "#d97706", uptitrate: "#e11d48" };
 
 export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge, strategy }) {
   const [range, setRange] = useState("day");

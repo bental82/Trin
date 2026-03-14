@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { genTimeline, computeAll, getDose, computePD, TODAY_N } from "@/components/tracker/pkEngine";
-import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
+import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
 import TodayTab      from "@/components/tracker/TodayTab";
 import WellbeingTab  from "@/components/tracker/WellbeingTab";
 import PDTab         from "@/components/tracker/PDTab";
@@ -34,13 +34,14 @@ export default function Tracker() {
   const [showHelp, setShowHelp] = useState(false);
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
-  const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown"
+  const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown" | "uptitrate"
 
   const tl     = useMemo(() => genTimeline(90), []);
   const tlBridge = useMemo(() => genBridgeTimeline(90), []);
   const tlBridge14 = useMemo(() => genBridgeTimeline14(90), []);
   const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90), []);
-  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD };
+  const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90), []);
+  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT };
   const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
   const tW     = useMemo(() => computeAll(tN), [tN]);
@@ -80,7 +81,7 @@ export default function Tracker() {
       value: altDaysWB.toFixed(1),
       color: "#0891b2",
       icon: "🌉",
-      detail: `Projected wellbeing for selected bridge strategy (${strategy === "alt8" ? "P20+alt 8d" : strategy === "alt14" ? "P20+alt 14d" : "Step-down"}).`,
+      detail: `Projected wellbeing for selected bridge strategy (${strategy === "alt8" ? "P20+alt 8d" : strategy === "alt14" ? "P20+alt 14d" : strategy === "uptitrate" ? "Uptitrate 15→20" : "Step-down"}).`,
     },
     {
       label: "Transition Stress",

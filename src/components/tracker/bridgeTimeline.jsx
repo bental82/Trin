@@ -27,6 +27,19 @@ export function doseTaper14(d) {
   return [10, 0];
 }
 
+// Uptitrate: 7d daily P20+T15, then 14d alt (wk1 T15, wk2 T20), then T20 only
+export function doseUptitrate(d) {
+  if (d < 0) return [0, 40];
+  if (d === 0) return [5, 20];
+  if (d <= 7) return [10, 20];
+  if (d < BRIDGE_START) return [10, 0];
+  const bd = d - BRIDGE_START;
+  if (bd < 7) return [15, 20];                                              // 7d daily P20 + T15
+  if (bd >= 7 && bd < 14) return [15, ((bd - 7) % 2 === 0) ? 20 : 0];      // alt wk1: T15
+  if (bd >= 14 && bd < 21) return [20, ((bd - 14) % 2 === 0) ? 20 : 0];    // alt wk2: T20
+  return [20, 0];
+}
+
 // P20 step-down: 7d daily → 8d every other day → 6d every 3rd day
 export function doseStepdown(d) {
   if (d < 0) return [0, 40];
@@ -73,6 +86,10 @@ const bridgeBoost14  = makeBridgeBoost(26);
 const bridgeStressSD = makeBridgeStress(21, 0.73, 5, 4.5, 2.5);
 const bridgeBoostSD  = makeBridgeBoost(24);
 
+// Uptitrate: same 21d coverage as alt14, but higher Trintellix dose softens the cliff
+const bridgeStressUT = makeBridgeStress(21, 0.65, 5, 5, 2.5);
+const bridgeBoostUT  = makeBridgeBoost(26);
+
 // ── Timeline generators ──
 
 function genTimeline(n, doseFn, stressFn, boostFn) {
@@ -102,4 +119,8 @@ export function genBridgeTimeline14(n = 90) {
 
 export function genBridgeTimelineSD(n = 90) {
   return genTimeline(n, doseStepdown, bridgeStressSD, bridgeBoostSD);
+}
+
+export function genBridgeTimelineUT(n = 90) {
+  return genTimeline(n, doseUptitrate, bridgeStressUT, bridgeBoostUT);
 }
