@@ -18,9 +18,6 @@ export default function ChartTooltip({ active, payload }) {
       <div style={{ color: "#0891b2", fontWeight: 700, marginBottom: 4, fontSize: 14 }}>
         Day {Math.round(d.day) + 1} — {d.ds}
       </div>
-      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 5 }}>
-        Rx: {d.vN}mg vort + {d.pN}mg prozac
-      </div>
       {payload.filter((p, i, arr) =>
         // only named entries, ignore fills, deduplicate by name, hide raw cS
         p.name && p.name !== "wbFill" && p.name !== "stFill" && p.dataKey !== "cS" && arr.findIndex(x => x.name === p.name) === i

@@ -182,23 +182,26 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD) {
   const pk = pkCalc(day, doseFn);
   const pd = pdFn(day);
 
-  // PK score reflects plasma steady-state receptor occupancy
-  // No artificial lag — PK should plateau by ~14 days (5× vortioxetine half-lives)
-  // Normalize against steady-state achievable max
-  const ssMax = doseFn === getDose
-    ? STEADY_STATE_PK_MAX
-    : computePkRaw(pkCalc(200, doseFn));
-  const pkScore = Math.min(100, (computePkRaw(pk) / Math.max(ssMax, 1)) * 100);
+  // PK score: always normalize against 10mg steady state so higher doses
+  // can exceed 100% — reflecting their higher SERT/receptor occupancy ceiling.
+  // Clinical data (pooled 6 trials): 20mg → +1 MADRS point vs 10mg,
+  // 51.4% vs 46.0% response, onset 4 weeks earlier (Thase 2023, Baldwin 2016).
+  const pkRaw = computePkRaw(pk);
+  const pkScore = (pkRaw / Math.max(STEADY_STATE_PK_MAX, 1)) * 100;
 
   const pdScore = pd.autorecept * 0.25 + pd.gabaDisinhib * 0.20 + pd.circadian * 0.10 + pd.bdnf * 0.20 + pd.glymphatic * 0.10 + pd.dmn * 0.15;
   const stress = (pd.norfluoxStress || 0) + (pd.cypStress || 0);
 
   // Prozac baseline ~60% — you were functional but not optimal
   const prozacBaseline = 60;
-  // With PD carryover, the sigmoids start higher → pdScore starts ~35-40% instead of ~0%.
-  // Max therapeutic gain is more modest: ~12 points (was 18 when PD started from zero).
-  // This reflects that Trintellix refines what Prozac built, not a fresh neuroadaptation.
-  const trinGain = (pkScore / 100) * (pdScore / 100) * 12;
+  // Dose-response: pkScore >100% for doses above 10mg reference.
+  // Diminishing returns above 100% — going from 80→90% SERT adds less
+  // marginal benefit than 50→80%. Factor of 0.5 on excess matches the
+  // ~1 MADRS point (≈1.5 wellbeing points) advantage of 20mg over 10mg.
+  const pkFactor = pkScore <= 100
+    ? pkScore / 100
+    : 1 + (pkScore - 100) / 100 * 0.5;
+  const trinGain = pkFactor * (pdScore / 100) * 12;
   // Transition dip: stress pulls you below baseline temporarily
   const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
   return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
