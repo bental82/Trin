@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 
 export default function StatCard({ label, value, color, detail, icon, bridgeValue, bridgeColor, strategyLabel }) {
   const [open, setOpen] = useState(false);
-  const hasBridge = bridgeValue != null && bridgeValue !== value;
+  const hasBridge = bridgeValue != null;
 
   return (
     <div

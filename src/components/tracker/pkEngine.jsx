@@ -185,7 +185,20 @@ function getSteadyStatePkMax(cypBase = DEFAULT_CYP_BASE) {
 
 export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DEFAULT_CYP_BASE) {
   const pk = pkCalc(day, doseFn, cypBase);
-  const pd = pdFn(day);
+
+  // PD dose-sensitivity: higher SERT occupancy drives faster downstream
+  // maturation (autoreceptor desens, BDNF, etc). Evaluate PD sigmoids at
+  // an accelerated timepoint. Reference: 10mg steady-state SERT ~82%.
+  // Clamped to 0.85×–1.15× to keep within biologically plausible range.
+  const refSert = 82;
+  const pdAccel = Math.max(0.85, Math.min(1.15, 1 + 0.2 * (pk.cS - refSert) / refSert));
+  const pdMat = pdFn(day * pdAccel);    // maturation at accelerated time
+  const pdStress = pdFn(day);           // stress uses real time (fluoxetine clearance)
+  const pd = {
+    ...pdMat,
+    norfluoxStress: pdStress.norfluoxStress,
+    cypStress: pdStress.cypStress,
+  };
 
   // PK score: always normalize against 10mg steady state so higher doses
   // can exceed 100% — reflecting their higher SERT/receptor occupancy ceiling.
