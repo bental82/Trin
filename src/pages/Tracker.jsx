@@ -218,10 +218,14 @@ export default function Tracker() {
         )}
       </div>
 
-      {/* DAY NAVIGATOR */}
+      {/* DAY NAVIGATOR + CYP SLIDER — sticky */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 20,
+        background: "#ffffff",
+        borderBottom: "1px solid #e2e8f0",
+      }}>
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-        background: "#ffffff", borderBottom: "1px solid #e2e8f0",
         padding: "8px 16px",
       }}>
         <button
@@ -273,8 +277,8 @@ export default function Tracker() {
       {/* CYP2D6 SLIDER */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-        background: "#ffffff", borderBottom: "1px solid #e2e8f0",
         padding: "6px 16px",
+        borderTop: "1px solid #f1f5f9",
       }}>
         <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>CYP2D6</span>
         <span style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{cypFactor.toFixed(1)}×</span>
@@ -286,6 +290,7 @@ export default function Tracker() {
         />
         <span style={{ fontSize: 10, color: "#94a3b8" }}>1.5×–2.2×</span>
       </div>
+      </div>{/* end sticky wrapper */}
 
       {/* TAB GROUP SWITCHER */}
       <div style={{

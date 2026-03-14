@@ -4,15 +4,15 @@ import {
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from "./TimeRangeSelector";
+import { cleanZeroLine } from "./TimeRangeSelector";
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
 
 export default function PDTab({ tl, tN, tW }) {
-  const [range, setRange] = useState("day");
   const [showToday, setShowToday] = useState(false);
   const todayData = tl.find(d => d.day === tN);
-  const chartData = cleanZeroLine(filterByRange(tl, range), [
+  const filtered = tl.filter(d => d.day <= 60 && d.day % 1 === 0);
+  const chartData = cleanZeroLine(filtered, [
     "gabaDisinhib", "autorecept", "circadian", "bdnf", "dmn", "glymphatic"
   ]);
   return (
@@ -21,13 +21,11 @@ export default function PDTab({ tl, tN, tW }) {
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "#0f172a" }}>PD Maturation Curves</h2>
       </div>
 
-      <TimeRangeSelector value={range} onChange={setRange} />
-
-      <ResponsiveContainer width="100%" height={300} style={{ overflow: "visible" }}>
+      <ResponsiveContainer width="100%" height={280} style={{ overflow: "visible" }}>
         <ComposedChart data={chartData} margin={{ top: 5, right: 6, left: -14, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-          <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={xTickFormatter(range)} stroke="#e2e8f0" domain={["dataMin", "dataMax"]} />
-          <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={v => v + "%"} stroke="#e2e8f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,200,220,.05)" vertical={false} />
+          <XAxis dataKey="day" type="number" tick={{ fill: "#475569", fontSize: 11 }} tickFormatter={v => "D" + (v + 1)} stroke="rgba(100,200,220,.08)" domain={["dataMin", "dataMax"]} />
+          <YAxis domain={[0, 100]} tick={{ fill: "#475569", fontSize: 11 }} tickFormatter={v => v + "%"} stroke="rgba(100,200,220,.08)" />
           <Tooltip {...TOOLTIP_PROPS} content={<ChartTooltip />} />
           <ReferenceLine x={tN} stroke="rgba(239,68,68,.7)" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           <Customized component={<TodayHitArea tN={tN} onToggle={() => setShowToday(v => !v)} />} />
