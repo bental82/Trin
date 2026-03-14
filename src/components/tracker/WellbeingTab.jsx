@@ -4,20 +4,22 @@ import {
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
 import ChartTooltip from "./ChartTooltip";
-import TimeRangeSelector, { filterByRange, xTickFormatter, cleanZeroLine } from "./TimeRangeSelector";
+import { cleanZeroLine } from "./TimeRangeSelector";
 import { Customized } from "recharts";
 import TodayHitArea from "./ClickableTodayLine";
+import StrategyToggles, { STRATEGY_COLORS, STRATEGY_LABELS } from "./StrategyToggles";
 
-const STRATEGY_LABELS = { alt8: "P20+alt 8d", alt14: "P20+alt 14d", stepdown: "Step-down", uptitrate: "15\u219220mg" };
-const STRATEGY_COLORS = { alt8: "#0891b2", alt14: "#7c3aed", stepdown: "#d97706", uptitrate: "#e11d48" };
-
-export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge, strategy }) {
-  const [range, setRange] = useState("day");
+export default function WellbeingTab({ tl, tlM, tN, peakWB, tlAll, bridgeShow, setBridgeShow }) {
   const [showToday, setShowToday] = useState(false);
-  const bridgeLabel = STRATEGY_LABELS[strategy] || "Bridge";
-  const bridgeColor = STRATEGY_COLORS[strategy] || "#0891b2";
-  const merged = tl.map((d, i) => ({ ...d, bridgeWB: tlBridge?.[i]?.wellbeing ?? null }));
-  const chartData = cleanZeroLine(filterByRange(merged, range), ["pkScore", "pdScore", "stressScore", "wellbeing", "bridgeWB"]);
+
+  const filtered = tl.filter(d => d.day <= 60 && d.day % 1 === 0);
+  const merged = filtered.map((d) => {
+    const i = tl.indexOf(d);
+    const row = { ...d };
+    Object.entries(tlAll).forEach(([k, bl]) => { row["b_" + k] = bl?.[i]?.wellbeing ?? null; });
+    return row;
+  });
+  const chartData = cleanZeroLine(merged, ["pkScore", "pdScore", "stressScore", "wellbeing", ...Object.keys(tlAll).map(k => "b_" + k)]);
   const todayData = tl.find(d => d.day === tN);
 
   return (
@@ -29,7 +31,7 @@ export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge, strategy }
         </p>
       </div>
 
-      <TimeRangeSelector value={range} onChange={setRange} />
+      <StrategyToggles show={bridgeShow} setShow={setBridgeShow} />
 
       <ResponsiveContainer width="100%" height={300} style={{ overflow: "visible" }}>
         <ComposedChart data={chartData} margin={{ top: 5, right: 6, left: -14, bottom: 5 }}>
@@ -44,18 +46,18 @@ export default function WellbeingTab({ tl, tlM, tN, peakWB, tlBridge, strategy }
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-          <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={xTickFormatter(range)} stroke="#e2e8f0" domain={["dataMin", "dataMax"]} />
+          <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 11 }} tickFormatter={v => "D" + (v + 1)} stroke="#e2e8f0" domain={["dataMin", "dataMax"]} />
           <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 11 }} stroke="#e2e8f0" />
-          <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} wrapperStyle={{ pointerEvents: "none", zIndex: 1000 }} offset={20} allowEscapeViewBox={{ x: true, y: true }} position={undefined} />
+          <Tooltip trigger="click" content={<ChartTooltip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} wrapperStyle={{ pointerEvents: "none", zIndex: 1000 }} offset={20} allowEscapeViewBox={{ x: true, y: true }} />
           <ReferenceLine x={0}  stroke="rgba(251,191,36,.3)"  strokeDasharray="4 3" label={{ value: "Start", fill: "#fbbf2460", fontSize: 8, position: "top" }} />
           <ReferenceLine x={tN} stroke="rgba(239,68,68,.7)" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
           <Customized component={<TodayHitArea tN={tN} onToggle={() => setShowToday(v => !v)} />} />
-          {/* Gradient fills — stroke fully disabled */}
           <Area type="monotone" dataKey="wellbeing"   fill="url(#wg)"  fillOpacity={1} stroke="transparent" strokeWidth={0} activeDot={false} legendType="none" tooltipType="none" name="wbFill" isAnimationActive={false} connectNulls={false} />
           <Area type="monotone" dataKey="stressScore" fill="url(#stg)" fillOpacity={1} stroke="transparent" strokeWidth={0} activeDot={false} legendType="none" tooltipType="none" name="stFill" isAnimationActive={false} connectNulls={false} />
-          {/* Lines on top */}
           <Line type="monotone" dataKey="wellbeing"   stroke="#22c55e" strokeWidth={3}   dot={false} name="Wellbeing" connectNulls={false} />
-          <Line type="monotone" dataKey="bridgeWB"   stroke={bridgeColor} strokeWidth={2}   dot={false} strokeDasharray="6 3" name={bridgeLabel} connectNulls={false} />
+          {Object.entries(STRATEGY_COLORS).map(([k, c]) =>
+            bridgeShow[k] && <Line key={k} type="monotone" dataKey={"b_" + k} stroke={c} strokeWidth={2} dot={false} strokeDasharray="6 3" name={STRATEGY_LABELS[k]} connectNulls={false} />
+          )}
           <Line type="monotone" dataKey="pkScore"     stroke="#06b6d4" strokeWidth={1.2} dot={false} strokeDasharray="5 3" name="PK Ceiling" connectNulls={false} />
           <Line type="monotone" dataKey="pdScore"     stroke="#a78bfa" strokeWidth={1.2} dot={false} strokeDasharray="5 3" name="PD Maturation" connectNulls={false} />
           <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1.2} dot={false} strokeDasharray="3 3" name="Transition Stress" connectNulls={false} />

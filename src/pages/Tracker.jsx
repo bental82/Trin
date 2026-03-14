@@ -35,12 +35,14 @@ export default function Tracker() {
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
   const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown" | "uptitrate"
+  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: true, sd: false, ut: false });
 
   const tl     = useMemo(() => genTimeline(90), []);
   const tlBridge = useMemo(() => genBridgeTimeline(90), []);
   const tlBridge14 = useMemo(() => genBridgeTimeline14(90), []);
   const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90), []);
   const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90), []);
+  const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT]);
   const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT };
   const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
@@ -330,12 +332,12 @@ export default function Tracker() {
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
         {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} />}
-        {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlBridge={tlActive} strategy={strategy} />}
+        {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} />}
-        {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlBridge={tlActive} />}
-        {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlBridge={tlActive} />}
-        {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlBridge={tlActive} />}
-        {tab === "bridge"   && <BridgeTab />}
+        {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "bridge"   && <BridgeTab bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "learn"    && <LearnTab tN={tN} tW={tW} />}
         {tab === "glossary" && <GlossaryTab />}
         {tab === "diary"    && <DiaryTab />}

@@ -59,9 +59,10 @@ function Tip({ active, payload }) {
   );
 }
 
-export default function BridgeTab() {
-  const [show, setShow] = useState({ taper: true, taper14: true, sd: true, ut: true, pk: false, pd: false, st: false });
-  const tog = k => setShow(s => ({ ...s, [k]: !s[k] }));
+export default function BridgeTab({ bridgeShow, setBridgeShow }) {
+  const [extra, setExtra] = useState({ pk: false, pd: false, st: false });
+  const togExtra = k => setExtra(s => ({ ...s, [k]: !s[k] }));
+  const togBridge = k => setBridgeShow(s => ({ ...s, [k]: !s[k] }));
 
   const todayN = useMemo(() => getTodayN(), []);
 
@@ -110,13 +111,13 @@ export default function BridgeTab() {
       </div>
 
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
-        <Btn on={show.taper} onClick={() => tog("taper")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt 8d</Btn>
-        <Btn on={show.taper14} onClick={() => tog("taper14")} color="#7c3aed" bg="#f5f3ff">{"\u{1F48A}"} P20+alt 14d</Btn>
-        <Btn on={show.sd} onClick={() => tog("sd")} color="#d97706" bg="#fffbeb">{"\u{1F48A}"} Step-down</Btn>
-        <Btn on={show.ut} onClick={() => tog("ut")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} 15{"\u2192"}20</Btn>
-        <Btn on={show.pk} onClick={() => tog("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
-        <Btn on={show.pd} onClick={() => tog("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
-        <Btn on={show.st} onClick={() => tog("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
+        <Btn on={bridgeShow.alt8} onClick={() => togBridge("alt8")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt 8d</Btn>
+        <Btn on={bridgeShow.alt14} onClick={() => togBridge("alt14")} color="#7c3aed" bg="#f5f3ff">{"\u{1F48A}"} P20+alt 14d</Btn>
+        <Btn on={bridgeShow.sd} onClick={() => togBridge("sd")} color="#d97706" bg="#fffbeb">{"\u{1F48A}"} Step-down</Btn>
+        <Btn on={bridgeShow.ut} onClick={() => togBridge("ut")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} 15{"\u2192"}20</Btn>
+        <Btn on={extra.pk} onClick={() => togExtra("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
+        <Btn on={extra.pd} onClick={() => togExtra("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
+        <Btn on={extra.st} onClick={() => togExtra("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
       </div>
 
       <ResponsiveContainer width="100%" height={370}>
@@ -132,30 +133,30 @@ export default function BridgeTab() {
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 10 }} tickFormatter={v => "D" + (v + 1)} stroke="#e2e8f0" domain={[0, N]} interval={4} />
           <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 10 }} stroke="#e2e8f0" />
-          <Tooltip content={<Tip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} />
+          <Tooltip trigger="click" content={<Tip />} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 3" }} />
 
           <ReferenceLine x={0} stroke="#fbbf2440" strokeDasharray="4 3" label={{ value: "Start", fill: "#fbbf2460", fontSize: 7, position: "top" }} />
           <ReferenceLine x={todayN} stroke="#ef4444b0" strokeDasharray="3 3" label={{ value: "Today", fill: "#ef4444", fontSize: 8, position: "top" }} />
-          {show.taper && (
+          {bridgeShow.alt8 && (
             <>
               <ReferenceLine x={BRIDGE_START + 7} stroke="#0891b240" strokeDasharray="3 3" label={{ value: "\u2192alt8", fill: "#0891b280", fontSize: 7, position: "top" }} />
               <ReferenceLine x={BRIDGE_START + 15} stroke="#0891b230" strokeDasharray="3 3" label={{ value: "8d off", fill: "#0891b260", fontSize: 7, position: "top" }} />
             </>
           )}
-          {show.taper14 && (
+          {bridgeShow.alt14 && (
             <>
               <ReferenceLine x={BRIDGE_START + 7} stroke="#7c3aed40" strokeDasharray="3 3" label={{ value: "\u2192alt14", fill: "#7c3aed80", fontSize: 7, position: "bottom" }} />
               <ReferenceLine x={BRIDGE_START + 21} stroke="#7c3aed30" strokeDasharray="3 3" label={{ value: "14d off", fill: "#7c3aed60", fontSize: 7, position: "bottom" }} />
             </>
           )}
-          {show.sd && (
+          {bridgeShow.sd && (
             <>
               <ReferenceLine x={BRIDGE_START + 7} stroke="#d9770640" strokeDasharray="3 3" label={{ value: "\u2192q2d", fill: "#d9770680", fontSize: 7, position: "insideTop" }} />
               <ReferenceLine x={BRIDGE_START + 15} stroke="#d9770630" strokeDasharray="3 3" label={{ value: "\u2192q3d", fill: "#d9770660", fontSize: 7, position: "insideTop" }} />
               <ReferenceLine x={BRIDGE_START + 21} stroke="#d9770620" strokeDasharray="3 3" label={{ value: "SD off", fill: "#d9770650", fontSize: 7, position: "insideTop" }} />
             </>
           )}
-          {show.ut && (
+          {bridgeShow.ut && (
             <>
               <ReferenceLine x={BRIDGE_START + 7} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "T15 alt", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
               <ReferenceLine x={BRIDGE_START + 14} stroke="#e11d4840" strokeDasharray="3 3" label={{ value: "\u2192T20", fill: "#e11d4880", fontSize: 7, position: "insideBottom" }} />
@@ -164,20 +165,20 @@ export default function BridgeTab() {
           )}
 
           <Area type="monotone" dataKey="wellbeing" fill="url(#bwg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="wbF" isAnimationActive={false} />
-          {show.st && <Area type="monotone" dataKey="stressScore" fill="url(#bstg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="stF" isAnimationActive={false} />}
-          {show.taper && <Area type="monotone" dataKey="taperWB" fill="url(#btpg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tpF" isAnimationActive={false} connectNulls={false} />}
-          {show.taper14 && <Area type="monotone" dataKey="taper14WB" fill="url(#btp14g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tp14F" isAnimationActive={false} connectNulls={false} />}
-          {show.sd && <Area type="monotone" dataKey="sdWB" fill="url(#bsdg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="sdF" isAnimationActive={false} connectNulls={false} />}
-          {show.ut && <Area type="monotone" dataKey="utWB" fill="url(#butg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="utF" isAnimationActive={false} connectNulls={false} />}
+          {extra.st && <Area type="monotone" dataKey="stressScore" fill="url(#bstg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="stF" isAnimationActive={false} />}
+          {bridgeShow.alt8 && <Area type="monotone" dataKey="taperWB" fill="url(#btpg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tpF" isAnimationActive={false} connectNulls={false} />}
+          {bridgeShow.alt14 && <Area type="monotone" dataKey="taper14WB" fill="url(#btp14g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tp14F" isAnimationActive={false} connectNulls={false} />}
+          {bridgeShow.sd && <Area type="monotone" dataKey="sdWB" fill="url(#bsdg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="sdF" isAnimationActive={false} connectNulls={false} />}
+          {bridgeShow.ut && <Area type="monotone" dataKey="utWB" fill="url(#butg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="utF" isAnimationActive={false} connectNulls={false} />}
 
           <Line type="monotone" dataKey="wellbeing" stroke="#22c55e" strokeWidth={2.5} dot={false} name="Actual" />
-          {show.taper && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 8d" connectNulls={false} />}
-          {show.taper14 && <Line type="monotone" dataKey="taper14WB" stroke="#7c3aed" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 14d" connectNulls={false} />}
-          {show.sd && <Line type="monotone" dataKey="sdWB" stroke="#d97706" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="Step-down" connectNulls={false} />}
-          {show.ut && <Line type="monotone" dataKey="utWB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="15\u219220mg" connectNulls={false} />}
-          {show.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
-          {show.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
-          {show.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Stress" />}
+          {bridgeShow.alt8 && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 8d" connectNulls={false} />}
+          {bridgeShow.alt14 && <Line type="monotone" dataKey="taper14WB" stroke="#7c3aed" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 14d" connectNulls={false} />}
+          {bridgeShow.sd && <Line type="monotone" dataKey="sdWB" stroke="#d97706" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="Step-down" connectNulls={false} />}
+          {bridgeShow.ut && <Line type="monotone" dataKey="utWB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="15\u219220mg" connectNulls={false} />}
+          {extra.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
+          {extra.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
+          {extra.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Stress" />}
 
           <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
         </ComposedChart>
@@ -189,13 +190,13 @@ export default function BridgeTab() {
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
           { label: "ALT 8d", sub: "7d+8d q2d", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
-            val: tlTaper.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: show.taper },
+            val: tlTaper.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: bridgeShow.alt8 },
           { label: "ALT 14d", sub: "7d+14d q2d", color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd",
-            val: tlTpr14.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.6", nc: "#16a34a", on: show.taper14 },
+            val: tlTpr14.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.6", nc: "#16a34a", on: bridgeShow.alt14 },
           { label: "STEP-DOWN", sub: "7d+8d+6d", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
-            val: tlSD.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.7", nc: "#16a34a", on: show.sd },
+            val: tlSD.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.7", nc: "#16a34a", on: bridgeShow.sd },
           { label: "15\u219220", sub: "T15+T20 alt", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
-            val: tlUT.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.65", nc: "#16a34a", on: show.ut },
+            val: tlUT.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.65", nc: "#16a34a", on: bridgeShow.ut },
         ].map((c, i) => (
           <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>
@@ -209,7 +210,18 @@ export default function BridgeTab() {
 
       {/* Dosing comparison */}
       <div style={{ margin: "12px 0", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid #e2e8f0" }}>
-        <div style={{ fontWeight: 700, fontSize: 12, color: "#334155", marginBottom: 8 }}>Dosing Comparison</div>
+        <div style={{ fontWeight: 700, fontSize: 12, color: "#334155", marginBottom: 8 }}>Dosing Schedule</div>
+
+        {/* Pre-retitration (common to all) */}
+        <div style={{ padding: "8px 10px", borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0", marginBottom: 10, fontSize: 11 }}>
+          <div style={{ fontWeight: 700, color: "#475569", marginBottom: 4 }}>Pre-Bridge (all strategies)</div>
+          <div style={{ color: "#64748b" }}>D0: T5 + P20 (start)</div>
+          <div style={{ color: "#64748b" }}>D1–D7: T10 + P20 (overlap)</div>
+          <div style={{ color: "#64748b" }}>D8–D22: T10 only (Prozac washout)</div>
+          <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>D23 (bridge start) {"\u2192"} strategies diverge below</div>
+        </div>
+
+        <div style={{ fontWeight: 600, fontSize: 11, color: "#64748b", marginBottom: 6 }}>Bridge Phase (from D23)</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, fontSize: 11 }}>
           <div>
             <div style={{ fontWeight: 700, color: "#0891b2", marginBottom: 3 }}>P20+alt 8d</div>
