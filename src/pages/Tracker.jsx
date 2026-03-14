@@ -13,7 +13,7 @@ import BridgeTab     from "@/components/tracker/BridgeTab";
 import { Pill } from "lucide-react";
 
 const DATA_TABS = [
-  { id: "bridge",   label: "🧠 Wellbeing" },
+  { id: "bridge",   label: "🌉 Bridges"   },
   { id: "pd",       label: "PD Curves"   },
   { id: "sert",     label: "SERT"        },
   { id: "rec",      label: "5-HT"        },
