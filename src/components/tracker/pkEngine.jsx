@@ -205,7 +205,7 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DE
   // Clinical data (pooled 6 trials): 20mg → +1 MADRS point vs 10mg,
   // 51.4% vs 46.0% response, onset 4 weeks earlier (Thase 2023, Baldwin 2016).
   const pkRaw = computePkRaw(pk);
-  const pkScore = (pkRaw / Math.max(getSteadyStatePkMax(cypBase), 1)) * 100;
+  const pkScore = (pkRaw / Math.max(getSteadyStatePkMax(DEFAULT_CYP_BASE), 1)) * 100;
 
   const pdScore = pd.autorecept * 0.25 + pd.gabaDisinhib * 0.20 + pd.circadian * 0.10 + pd.bdnf * 0.20 + pd.glymphatic * 0.10 + pd.dmn * 0.15;
   const stress = (pd.norfluoxStress || 0) + (pd.cypStress || 0);
