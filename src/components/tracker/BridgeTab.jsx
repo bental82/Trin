@@ -35,7 +35,7 @@ function wb(day, doseFn, pdFn, extraStressFn, boostFn, cypBase) {
   return { ...result, wellbeing: adjusted, stressScore: result.stressScore + extraStress, day };
 }
 
-const N = 75;
+const N = 90;
 function gen(doseFn, pdFn, extraStressFn, boostFn, cypBase) {
   const data = [];
   for (let i = 0; i <= N; i++) data.push(wb(i, doseFn, pdFn, extraStressFn, boostFn, cypBase));
