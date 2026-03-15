@@ -56,8 +56,8 @@ export default function Tracker() {
     return bd || null;
   }, [tN, tlActive]);
 
-  const strategyLabel = strategy === "alt8" ? "Alt 8d" : strategy === "alt14" ? "Alt 14d" : strategy === "uptitrate" ? "15\u219220" : "Step-down";
-  const bridgeColor = strategy === "alt8" ? "#0891b2" : strategy === "alt14" ? "#7c3aed" : strategy === "uptitrate" ? "#e11d48" : "#d97706";
+  const strategyLabel = strategy === "alt8" ? "Alt 8d" : strategy === "alt14" ? "Alt 14d" : strategy === "uptitrate" ? "15→20" : strategy === "ut15wk" ? "T15 wk" : "Step-down";
+  const bridgeColor = strategy === "alt8" ? "#0891b2" : strategy === "alt14" ? "#7c3aed" : strategy === "uptitrate" ? "#e11d48" : strategy === "ut15wk" ? "#e11d48" : "#d97706";
 
   const statCards = [
     {
