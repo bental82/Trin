@@ -31,8 +31,8 @@ export default function Tracker() {
   const [showHelp, setShowHelp] = useState(false);
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
-  const [strategy, setStrategy] = useState("alt14");  // "alt8" | "alt14" | "stepdown" | "uptitrate"
-  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: true, sd: false, ut: false, ut15: false });
+  const [strategy, setStrategy] = useState("uptitrate");  // "alt8" | "alt14" | "stepdown" | "uptitrate" | "ut15wk"
+  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: false, sd: false, ut: true, ut15: false });
   const [cypFactor, setCypFactor] = useState(2.2);
 
   const tl     = useMemo(() => genTimeline(90, cypFactor), [cypFactor]);
