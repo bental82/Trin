@@ -95,12 +95,19 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
   // Compute min dip for each strategy — post-bridge from day 43 (BRIDGE_START + 21)
   const postBridgeDay = BRIDGE_START + 21;
   const minPost = (arr) => arr.filter(d => d.day >= postBridgeDay).reduce((m, d) => d.wellbeing < m.wellbeing ? d : m);
+  const atBridgeEnd = (arr) => arr.find(d => d.day === postBridgeDay)?.wellbeing ?? null;
   const minA     = minPost(tl);
   const minTaper = minPost(tlTaper);
   const minTpr14 = minPost(tlTpr14);
   const minSD    = minPost(tlSD);
   const minUT    = minPost(tlUT);
   const minUT15  = minPost(tlUT15);
+  const endA     = atBridgeEnd(tl);
+  const endTaper = atBridgeEnd(tlTaper);
+  const endTpr14 = atBridgeEnd(tlTpr14);
+  const endSD    = atBridgeEnd(tlSD);
+  const endUT    = atBridgeEnd(tlUT);
+  const endUT15  = atBridgeEnd(tlUT15);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
     <button onClick={onClick} style={{
@@ -239,24 +246,24 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, marginTop: 12 }}>
         {[
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
-            val: todayD?.wellbeing, meets: minA.wellbeing, on: true },
+            val: todayD?.wellbeing, meets: minA.wellbeing, endVal: endA, on: true },
           { label: "ALT 8d", sub: "7d+8d q2d", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
             val: todayD ? (tlTaper.find(d => d.day === todayN)?.wellbeing ?? null) : null,
-            meets: minTaper.wellbeing, on: bridgeShow.alt8 },
+            meets: minTaper.wellbeing, endVal: endTaper, on: bridgeShow.alt8 },
           { label: "ALT 14d", sub: "7d+14d q2d", color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd",
             val: todayD ? (tlTpr14.find(d => d.day === todayN)?.wellbeing ?? null) : null,
-            meets: minTpr14.wellbeing, on: bridgeShow.alt14 },
+            meets: minTpr14.wellbeing, endVal: endTpr14, on: bridgeShow.alt14 },
           { label: "STEP-DOWN", sub: "7d+8d+6d", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
             val: todayD ? (tlSD.find(d => d.day === todayN)?.wellbeing ?? null) : null,
-            meets: minSD.wellbeing, on: bridgeShow.sd },
+            meets: minSD.wellbeing, endVal: endSD, on: bridgeShow.sd },
           { label: "T20 FAST", sub: "T20 tomorrow", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
             val: todayD ? (tlUT.find(d => d.day === todayN)?.wellbeing ?? null) : null,
-            meets: minUT.wellbeing, on: bridgeShow.ut },
+            meets: minUT.wellbeing, endVal: endUT, on: bridgeShow.ut },
           { label: "T15 WK", sub: "T15 wk1, T20 wk2", color: "#be185d", bg: "#fdf2f8", border: "#f9a8d4",
             val: todayD ? (tlUT15.find(d => d.day === todayN)?.wellbeing ?? null) : null,
-            meets: minUT15.wellbeing, on: bridgeShow.ut15 },
+            meets: minUT15.wellbeing, endVal: endUT15, on: bridgeShow.ut15 },
         ].map((c, i) => {
-          const drop = (c.val != null && c.meets != null) ? c.meets - c.val : null;
+          const drop = (c.endVal != null && c.meets != null) ? c.meets - c.endVal : null;
           const dropColor = drop != null ? (drop >= 0 ? "#16a34a" : "#ef4444") : "#94a3b8";
           return (
             <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
