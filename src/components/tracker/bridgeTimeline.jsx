@@ -87,28 +87,27 @@ function makeBridgeBoost(coverageDays) {
   };
 }
 
-// Stress amplitudes calibrated from PK-computed SERT occupancy cliffs:
-//   Alt 8d:  SERT drops 26.1pp over 10d post-bridge → amp 0.80
-//   Alt 14d: SERT drops 26.5pp over 10d post-bridge → amp 0.80 (same cliff, just delayed)
-//   Step-down: SERT drops 24.0pp over 10d → amp 0.73 (q3d phase pre-tapers SERT)
-// The real advantage of longer bridges is more Trintellix PD maturation time,
-// not a softer discontinuation cliff (norfluoxetine t½=223h dominates either way).
-export const bridgeStress   = makeBridgeStress(15, 0.80, 5, 4,   2.5);
+// Stress amplitudes scaled from PK-computed SERT occupancy cliffs:
+//   Alt 8d:  SERT drops 26.1pp over 10d post-bridge → amp 8
+//   Alt 14d: SERT drops 26.5pp over 10d post-bridge → amp 8 (same cliff, just delayed)
+//   Step-down: SERT drops 24.0pp over 10d → amp 7 (q3d phase pre-tapers SERT)
+//   T20 fast: higher T dose → more SERT from vortioxetine alone → softer cliff → amp 5
+//   T15 wk: less SERT coverage during first alt week → amp 6
+export const bridgeStress   = makeBridgeStress(15, 8, 5, 4,   2.5);
 export const bridgeBoost    = makeBridgeBoost(20);
 
-export const bridgeStress14 = makeBridgeStress(21, 0.80, 5, 5,   2.5);
+export const bridgeStress14 = makeBridgeStress(21, 8, 5, 5,   2.5);
 export const bridgeBoost14  = makeBridgeBoost(26);
 
-export const bridgeStressSD = makeBridgeStress(21, 0.73, 5, 4.5, 2.5);
+export const bridgeStressSD = makeBridgeStress(21, 7, 5, 4.5, 2.5);
 export const bridgeBoostSD  = makeBridgeBoost(24);
 
 // T20 fast: T20 from bd 9, higher SERT means softer cliff
-export const bridgeStressUT = makeBridgeStress(21, 0.60, 5, 5, 2.5);
+export const bridgeStressUT = makeBridgeStress(21, 5, 5, 5, 2.5);
 export const bridgeBoostUT  = makeBridgeBoost(26);
 
 // T15 wk: T15 first week then T20, slightly higher stress than T20 fast
-// (less SERT coverage during first alt week)
-export const bridgeStressUT15w = makeBridgeStress(21, 0.65, 5, 5, 2.5);
+export const bridgeStressUT15w = makeBridgeStress(21, 6, 5, 5, 2.5);
 export const bridgeBoostUT15w  = makeBridgeBoost(26);
 
 // ── Timeline generators ──
