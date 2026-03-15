@@ -239,31 +239,40 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, marginTop: 12 }}>
         {[
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
-            val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
+            val: todayD?.wellbeing, meets: minA.wellbeing, on: true },
           { label: "ALT 8d", sub: "7d+8d q2d", color: "#0891b2", bg: "#f0f9ff", border: "#a5f3fc",
-            val: todayD ? (tlTaper.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
-            note: `Dip ${minTaper.wellbeing.toFixed(1)}`, nc: minTaper.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.alt8 },
+            val: todayD ? (tlTaper.find(d => d.day === todayN)?.wellbeing ?? null) : null,
+            meets: minTaper.wellbeing, on: bridgeShow.alt8 },
           { label: "ALT 14d", sub: "7d+14d q2d", color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd",
-            val: todayD ? (tlTpr14.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
-            note: `Dip ${minTpr14.wellbeing.toFixed(1)}`, nc: minTpr14.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.alt14 },
+            val: todayD ? (tlTpr14.find(d => d.day === todayN)?.wellbeing ?? null) : null,
+            meets: minTpr14.wellbeing, on: bridgeShow.alt14 },
           { label: "STEP-DOWN", sub: "7d+8d+6d", color: "#d97706", bg: "#fffbeb", border: "#fde68a",
-            val: todayD ? (tlSD.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
-            note: `Dip ${minSD.wellbeing.toFixed(1)}`, nc: minSD.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.sd },
+            val: todayD ? (tlSD.find(d => d.day === todayN)?.wellbeing ?? null) : null,
+            meets: minSD.wellbeing, on: bridgeShow.sd },
           { label: "T20 FAST", sub: "T20 tomorrow", color: "#e11d48", bg: "#fff1f2", border: "#fda4af",
-            val: todayD ? (tlUT.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
-            note: `Dip ${minUT.wellbeing.toFixed(1)}`, nc: minUT.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.ut },
+            val: todayD ? (tlUT.find(d => d.day === todayN)?.wellbeing ?? null) : null,
+            meets: minUT.wellbeing, on: bridgeShow.ut },
           { label: "T15 WK", sub: "T15 wk1, T20 wk2", color: "#be185d", bg: "#fdf2f8", border: "#f9a8d4",
-            val: todayD ? (tlUT15.find(d => d.day === todayN)?.wellbeing ?? null) : null, vl: "now",
-            note: `Dip ${minUT15.wellbeing.toFixed(1)}`, nc: minUT15.wellbeing > minA.wellbeing ? "#16a34a" : "#ef4444", on: bridgeShow.ut15 },
-        ].map((c, i) => (
-          <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>
-            <div style={{ fontSize: 7, color: "#64748b", marginTop: 1 }}>{c.sub}</div>
-            <div style={{ fontSize: 19, fontWeight: 800, color: c.color, marginTop: 3 }}>{c.val?.toFixed(1) ?? "\u2014"}</div>
-            <div style={{ fontSize: 7, color: "#64748b" }}>{c.vl}</div>
-            <div style={{ fontSize: 8, color: c.nc, marginTop: 3, fontWeight: 600 }}>{c.note}</div>
-          </div>
-        ))}
+            val: todayD ? (tlUT15.find(d => d.day === todayN)?.wellbeing ?? null) : null,
+            meets: minUT15.wellbeing, on: bridgeShow.ut15 },
+        ].map((c, i) => {
+          const drop = (c.val != null && c.meets != null) ? c.meets - c.val : null;
+          const dropColor = drop != null ? (drop >= 0 ? "#16a34a" : "#ef4444") : "#94a3b8";
+          return (
+            <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>
+              <div style={{ fontSize: 7, color: "#64748b", marginTop: 1 }}>{c.sub}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: c.color, marginTop: 3 }}>{c.val?.toFixed(1) ?? "\u2014"}</div>
+              <div style={{ fontSize: 7, color: "#64748b" }}>now</div>
+              <div style={{ fontSize: 8, color: dropColor, marginTop: 3, fontWeight: 600 }}>
+                {drop != null ? `Drop ${drop >= 0 ? "+" : ""}${drop.toFixed(1)}` : "\u2014"}
+              </div>
+              <div style={{ fontSize: 8, color: "#64748b", marginTop: 2, fontWeight: 600 }}>
+                Meets {c.meets?.toFixed(1) ?? "\u2014"}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Dosing comparison */}
