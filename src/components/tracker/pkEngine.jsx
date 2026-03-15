@@ -42,14 +42,19 @@ export const REC = {
 // ── Core PK functions (parameterized by dose function for reuse) ──
 
 export function fluoxEquivAt(h, doseFn = getDose) {
-  let level = PROZAC_SS_FLUOX * Math.exp(-LN2 * h / FLUOX_HALFLIFE);
+  let fluoxLevel    = PROZAC_SS_FLUOX * Math.exp(-LN2 * h / FLUOX_HALFLIFE);
+  let norfluoxLevel = PROZAC_SS_NORFLUOX * Math.exp(-LN2 * h / NORFLUOX_HALFLIFE);
   for (let d = 0; d <= Math.floor(h / 24); d++) {
     const [, prozacDose] = doseFn(d);
     if (prozacDose > 0 && h > d * 24) {
-      level += prozacDose * Math.exp(-LN2 * (h - d * 24) / FLUOX_HALFLIFE);
+      const elapsed = h - d * 24;
+      fluoxLevel    += prozacDose * Math.exp(-LN2 * elapsed / FLUOX_HALFLIFE);
+      norfluoxLevel += prozacDose * NORFLUOX_CONV * Math.exp(-LN2 * elapsed / NORFLUOX_HALFLIFE);
     }
   }
-  return (level / PROZAC_SS_FLUOX) * 40;
+  const fE = (fluoxLevel / PROZAC_SS_FLUOX) * 40;
+  const nE = (norfluoxLevel / PROZAC_SS_NORFLUOX) * 40;
+  return { fE, nE };
 }
 
 export function pkCalc(day, doseFn = getDose, cypBase = DEFAULT_CYP_BASE) {
@@ -68,12 +73,16 @@ export function pkCalc(day, doseFn = getDose, cypBase = DEFAULT_CYP_BASE) {
     }
   }
   const fluoxEquiv = Math.max(0, (fluoxLevel / PROZAC_SS_FLUOX) * 40);
+  const norfluoxEquiv = Math.max(0, (norfluoxLevel / PROZAC_SS_NORFLUOX) * 40);
 
   // CYP2D6 inhibition: Wellbutrin provides constant ~2.2x baseline.
-  // Prozac adds additional inhibition on top during overlap period.
+  // Both fluoxetine and norfluoxetine (t½=223h) are potent CYP2D6 inhibitors.
+  // Norfluoxetine maintains CYP inhibition weeks after fluoxetine clears.
   // Cap at 2.8x — CYP2D6 saturates well before 3.5x when both inhibitors present.
-  const prozacCypContrib = Math.min(1.0, (fluoxEquiv / 40) * 1.0);
-  const totalCypBoost    = Math.min(2.8, cypBase + prozacCypContrib * 0.4);
+  const fluoxCypContrib    = Math.min(1.0, fluoxEquiv / 40);
+  const norfluoxCypContrib = Math.min(1.0, norfluoxEquiv / 40);
+  const prozacCypContrib   = Math.min(1.0, fluoxCypContrib * 0.5 + norfluoxCypContrib * 0.5);
+  const totalCypBoost      = Math.min(2.8, cypBase + prozacCypContrib * 0.4);
 
   // Vortioxetine accumulation (affected by CYP2D6 at time of each dose)
   let vortLevel = 0;
@@ -81,8 +90,9 @@ export function pkCalc(day, doseFn = getDose, cypBase = DEFAULT_CYP_BASE) {
     const [vortDose] = doseFn(d);
     if (vortDose > 0 && h > d * 24) {
       const elapsed = h - d * 24;
-      const doseTimeFluox = fluoxEquivAt(d * 24, doseFn);
-      const doseTimeCyp   = Math.min(2.8, cypBase + Math.min(1.0, (doseTimeFluox / 40) * 1.0) * 0.4);
+      const { fE: dtFluox, nE: dtNorfluox } = fluoxEquivAt(d * 24, doseFn);
+      const dtCypContrib = Math.min(1.0, Math.min(1.0, dtFluox / 40) * 0.5 + Math.min(1.0, dtNorfluox / 40) * 0.5);
+      const doseTimeCyp  = Math.min(2.8, cypBase + dtCypContrib * 0.4);
       // CYP inhibition reduces clearance → extends t½ and proportionally increases AUC.
       // Using t½ × CYP factor (not dose × CYP) avoids double-counting.
       // At CYP=2.2 (bupropion alone): t½ ≈ 145h, AUC ≈ 2.2× — matches CYP2D6 PM literature.
@@ -164,13 +174,13 @@ export function computePD(day) {
 // ── PK score weighting ──
 function computePkRaw(pk) {
   return (
-    pk.sV * 0.25 +
-    (pk["5-HT3"]  || 0) * 0.20 +
-    (pk["5-HT1A"] || 0) * 0.15 +
+    pk.sV * 0.30 +
+    (pk["5-HT3"]  || 0) * 0.22 +
+    (pk["5-HT1A"] || 0) * 0.20 +
     (pk["5-HT7"]  || 0) * 0.10 +
-    (pk["5-HT1B"] || 0) * 0.05 +
+    (pk["5-HT1B"] || 0) * 0.06 +
     (pk["5-HT1D"] || 0) * 0.05 +
-    Math.min(100, pk.vE * 5) * 0.05
+    Math.min(100, pk.vE * 5) * 0.07
   );
 }
 

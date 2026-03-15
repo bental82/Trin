@@ -3,34 +3,23 @@ import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import { getDose, computePD, computeAll, getTodayN } from "@/components/tracker/pkEngine";
-import { BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate, doseUptitrate15w } from "@/components/tracker/bridgeTimeline";
+import { getDose, computePD, computeAll, getTodayN, START } from "@/components/tracker/pkEngine";
+import {
+  BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate, doseUptitrate15w,
+  bridgeStress as stressTaper, bridgeBoost as boostTaper,
+  bridgeStress14 as stressTpr14, bridgeBoost14 as boostTpr14,
+  bridgeStressSD as stressSD, bridgeBoostSD as boostSD,
+  bridgeStressUT as stressUT, bridgeBoostUT as boostUT,
+  bridgeStressUT15w as stressUT15, bridgeBoostUT15w as boostUT15,
+} from "@/components/tracker/bridgeTimeline";
 import { TOOLTIP_PROPS } from "@/components/tracker/ChartTooltip";
-
-// ── Bridge stress curves ──
-
-function makeBridgeStress(endOffset, amplitude, center, width, steepness) {
-  return day => {
-    const da = day - (BRIDGE_START + endOffset);
-    if (da <= 0) return 0;
-    return Math.max(0, amplitude * Math.exp(-0.5 * ((da - center) / width) ** 2)) * (1 / (1 + Math.exp(-steepness * (da - 1))));
-  };
-}
-
-function makeBridgeBoost(coverageDays) {
-  return (day, pk) => {
-    return (pk.fE > 2 && day >= BRIDGE_START && day < BRIDGE_START + coverageDays)
-      ? Math.min(8, (pk.fE / 20) * 8)
-      : 0;
-  };
-}
 
 // ── Wellbeing calculator ──
 
 function wb(day, doseFn, pdFn, extraStressFn, boostFn, cypBase) {
   const result = computeAll(day, doseFn, pdFn, cypBase);
   const extraStress = extraStressFn ? extraStressFn(day) : 0;
-  const boost = boostFn ? boostFn(day, result) : 0;
+  const boost = boostFn ? boostFn(day, result.fE) : 0;
   const adjusted = Math.max(0, Math.min(100, result.wellbeing - extraStress + boost));
   return { ...result, wellbeing: adjusted, stressScore: result.stressScore + extraStress, day };
 }
@@ -48,7 +37,7 @@ function Tip({ active, payload, isDelta }) {
   const d = payload[0]?.payload;
   if (!d) return null;
   const day = d.day;
-  const dt = new Date("2026-02-12");
+  const dt = new Date(START);
   dt.setDate(dt.getDate() + Math.floor(day));
   const ds = dt.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
   const skip = new Set(["wbF", "stF", "tpF", "tp14F", "sdF", "utF", "ut15F"]);
@@ -75,24 +64,12 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
 
   const todayN = useMemo(() => getTodayN(), []);
 
-  const stressTaper = useMemo(() => makeBridgeStress(15, 0.8, 5, 4, 2.5), []);
-  const stressTpr14 = useMemo(() => makeBridgeStress(21, 0.6, 5, 5, 2.5), []);
-  const stressSD    = useMemo(() => makeBridgeStress(21, 0.7, 5, 4.5, 2.5), []);
-  const stressUT    = useMemo(() => makeBridgeStress(21, 0.60, 5, 5, 2.5), []);
-  const stressUT15  = useMemo(() => makeBridgeStress(21, 0.65, 5, 5, 2.5), []);
-
-  const boostTaper = useMemo(() => makeBridgeBoost(20), []);
-  const boostTpr14 = useMemo(() => makeBridgeBoost(26), []);
-  const boostSD    = useMemo(() => makeBridgeBoost(24), []);
-  const boostUT    = useMemo(() => makeBridgeBoost(26), []);
-  const boostUT15  = useMemo(() => makeBridgeBoost(26), []);
-
   const tl      = useMemo(() => gen(getDose, computePD, null, null, cypBase), [cypBase]);
-  const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper, cypBase), [stressTaper, boostTaper, cypBase]);
-  const tlTpr14 = useMemo(() => gen(doseTaper14, computePD, stressTpr14, boostTpr14, cypBase), [stressTpr14, boostTpr14, cypBase]);
-  const tlSD    = useMemo(() => gen(doseStepdown, computePD, stressSD, boostSD, cypBase), [stressSD, boostSD, cypBase]);
-  const tlUT    = useMemo(() => gen(doseUptitrate, computePD, stressUT, boostUT, cypBase), [stressUT, boostUT, cypBase]);
-  const tlUT15  = useMemo(() => gen(doseUptitrate15w, computePD, stressUT15, boostUT15, cypBase), [stressUT15, boostUT15, cypBase]);
+  const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper, cypBase), [cypBase]);
+  const tlTpr14 = useMemo(() => gen(doseTaper14, computePD, stressTpr14, boostTpr14, cypBase), [cypBase]);
+  const tlSD    = useMemo(() => gen(doseStepdown, computePD, stressSD, boostSD, cypBase), [cypBase]);
+  const tlUT    = useMemo(() => gen(doseUptitrate, computePD, stressUT, boostUT, cypBase), [cypBase]);
+  const tlUT15  = useMemo(() => gen(doseUptitrate15w, computePD, stressUT15, boostUT15, cypBase), [cypBase]);
 
   const data = useMemo(() => tl.map((d, i) => ({
     ...d,
