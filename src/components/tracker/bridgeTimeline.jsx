@@ -1,7 +1,7 @@
-import { computeAll, computePD, getDose } from "./pkEngine";
+import { computeAll, computePD, getDose, BRIDGE_DAY } from "./pkEngine";
 
-// Bridge starts at D23 (index 22) — when Prozac 20mg was restarted
-export const BRIDGE_START = 22;
+// Re-export for backward compat (Tracker.jsx imports BRIDGE_START from here)
+export const BRIDGE_START = BRIDGE_DAY;
 
 // P20+alt days dose function
 export function doseTaper(d) {

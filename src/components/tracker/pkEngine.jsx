@@ -2,12 +2,22 @@ export const START = "2026-02-12";
 export const TODAY_S = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
 const LN2 = Math.log(2);
 
-// ── Default dose schedule (actual regimen) ──
+// Bridge phase starts Day 22 — Prozac 20mg reintroduced for uptitration support
+export const BRIDGE_DAY = 22;
+
+// ── Actual dose schedule (T20-fast regimen) ──
+// Pre-switch → overlap → washout → bridge → uptitrate → maintenance
 export function getDose(d) {
-  if (d < 0) return [0, 40];
-  if (d === 0) return [5, 20];
-  if (d <= 7) return [10, 20];
-  return [10, 0];
+  if (d < 0) return [0, 40];                                                  // Pre-switch: Prozac 40mg
+  if (d === 0) return [5, 20];                                                 // Day 0: Vort 5mg intro, Prozac halved
+  if (d <= 7) return [10, 20];                                                 // Week 1: Vort 10mg + Prozac 20mg overlap
+  if (d < BRIDGE_DAY) return [10, 0];                                          // Weeks 2-3: Vort 10mg, Prozac washout
+  const bd = d - BRIDGE_DAY;
+  if (bd < 7) return [10, 20];                                                 // Bridge days 0-6: Vort 10mg + Prozac 20mg daily
+  if (bd === 7) return [10, 20];                                               // Bridge day 7: last T10 + P20
+  if (bd === 8) return [15, 0];                                                // Bridge day 8: uptitrate to T15 (P20 off-day)
+  if (bd >= 9 && bd < 21) return [20, ((bd - 7) % 2 === 0) ? 20 : 0];        // Bridge day 9+: T20 + P20 alternating
+  return [20, 0];                                                              // Maintenance: T20 only
 }
 
 // ── PK Constants ──
@@ -19,8 +29,9 @@ const FLUOX_EMAX         = 88;   // max SERT occupancy from fluoxetine (%) — P
 const VORT_HALFLIFE      = 66;   // hours — vortioxetine
 const VORT_EC50          = 5;    // reference EC50 for receptor subtype occupancy calculations
 const VORT_EMAX          = 100;  // max SERT occupancy from vortioxetine (%)
-const VORT_SERT_EC50     = 45;   // Hill EC50 for vortioxetine SERT (PET-calibrated: 10mg→50%)
-const SERT_HILL_N        = 2;    // Hill coefficient — fitted to PET dose-response (Stenkrona 2015)
+const VORT_SERT_EC50     = 24;   // Hill EC50 for vortioxetine SERT (PET-calibrated: 10mg→65%, Stenkrona 2013)
+const VORT_SERT_HILL_N   = 1;    // Hill coefficient for vortioxetine — n=1 fits PET across 5-60mg range
+const FLUOX_SERT_HILL_N  = 2;    // Hill coefficient for fluoxetine — n=2 matches Meyer 2004 SSRI curve
 
 // Wellbutrin (bupropion) is a strong CYP2D6 inhibitor taken continuously.
 // Per Chen et al. (2013, PMC3775155): AUC +128% (~2.28x), Cmax +114% (~2.14x).
@@ -101,12 +112,13 @@ export function pkCalc(day, doseFn = getDose, cypBase = DEFAULT_CYP_BASE) {
   }
   const vortEffective = Math.max(0, vortLevel);
 
-  // Hill equation SERT occupancy (n=2, PET-calibrated EC50s)
-  // 10mg normal→50%, 20mg normal→80%, 10mg+Wellbutrin→81% (Stenkrona 2015)
-  const vEn = Math.pow(vortEffective, SERT_HILL_N);
-  const fEn = Math.pow(fluoxEquiv, SERT_HILL_N);
-  const sertFromVort  = VORT_EMAX * vEn / (Math.pow(VORT_SERT_EC50, SERT_HILL_N) + vEn);
-  const sertFromFluox = FLUOX_EMAX * fEn / (Math.pow(FLUOX_EC50, SERT_HILL_N) + fEn);
+  // Hill equation SERT occupancy (PET-calibrated EC50s, separate Hill coefficients)
+  // Vortioxetine n=1: 10mg→65%, 10mg+WB→79%, 20mg→79%, 20mg+WB→89% (Stenkrona 2013, Areberg 2012)
+  // Fluoxetine n=2: 40mg→86%, 20mg→81% (Meyer 2004)
+  const vEn = Math.pow(vortEffective, VORT_SERT_HILL_N);
+  const fEn = Math.pow(fluoxEquiv, FLUOX_SERT_HILL_N);
+  const sertFromVort  = VORT_EMAX * vEn / (Math.pow(VORT_SERT_EC50, VORT_SERT_HILL_N) + vEn);
+  const sertFromFluox = FLUOX_EMAX * fEn / (Math.pow(FLUOX_EC50, FLUOX_SERT_HILL_N) + fEn);
   // Bliss independence of PET-calibrated Hill values — appropriate here because
   // each drug has a different Emax, and individual values are already PET-matched.
   const combinedSert  = Math.min(98, 100 * (1 - (1 - sertFromVort / 100) * (1 - sertFromFluox / 100)));
@@ -198,9 +210,9 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DE
 
   // PD dose-sensitivity: higher SERT occupancy drives faster downstream
   // maturation (autoreceptor desens, BDNF, etc). Evaluate PD sigmoids at
-  // an accelerated timepoint. Reference: 10mg steady-state SERT ~82%.
+  // an accelerated timepoint. Reference: 10mg+Wellbutrin steady-state SERT ~79%.
   // Clamped to 0.85×–1.15× to keep within biologically plausible range.
-  const refSert = 82;
+  const refSert = 79;
   const pdAccel = Math.max(0.85, Math.min(1.15, 1 + 0.2 * (pk.cS - refSert) / refSert));
   const pdMat = pdFn(day * pdAccel);    // maturation at accelerated time
   const pdStress = pdFn(day);           // stress uses real time (fluoxetine clearance)
