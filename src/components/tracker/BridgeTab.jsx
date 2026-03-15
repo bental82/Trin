@@ -115,14 +115,15 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
 
   const todayD = data.find(d => d.day === todayN);
 
-  // Compute min dip for each strategy — post-bridge discontinuation window
-  const minPost = (arr, endOffset) => arr.filter(d => d.day >= BRIDGE_START + endOffset).reduce((m, d) => d.wellbeing < m.wellbeing ? d : m);
-  const minA     = minPost(tl, 0);
-  const minTaper = minPost(tlTaper, 15);
-  const minTpr14 = minPost(tlTpr14, 21);
-  const minSD    = minPost(tlSD, 21);
-  const minUT    = minPost(tlUT, 21);
-  const minUT15  = minPost(tlUT15, 21);
+  // Compute min dip for each strategy — post-bridge from day 43 (BRIDGE_START + 21)
+  const postBridgeDay = BRIDGE_START + 21;
+  const minPost = (arr) => arr.filter(d => d.day >= postBridgeDay).reduce((m, d) => d.wellbeing < m.wellbeing ? d : m);
+  const minA     = minPost(tl);
+  const minTaper = minPost(tlTaper);
+  const minTpr14 = minPost(tlTpr14);
+  const minSD    = minPost(tlSD);
+  const minUT    = minPost(tlUT);
+  const minUT15  = minPost(tlUT15);
 
   const Btn = ({ on, onClick, color, bg, children }) => (
     <button onClick={onClick} style={{
