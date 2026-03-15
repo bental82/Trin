@@ -6,20 +6,18 @@ export default function ChartTooltip({ active, payload }) {
   if (!d) return null;
   return (
     <div style={{
-      background: "#ffffff",
+      background: "#ffffffee",
       border: "1px solid #cbd5e1",
-      boxShadow: "0 4px 12px rgba(0,0,0,.08)",
+      boxShadow: "0 2px 8px rgba(0,0,0,.08)",
       borderRadius: 8,
-      padding: "10px 14px",
-      fontSize: 13,
+      padding: "8px 12px",
+      fontSize: 12,
       color: "#334155",
-      maxWidth: 280,
+      maxWidth: 260,
+      backdropFilter: "blur(6px)",
     }}>
-      <div style={{ color: "#0891b2", fontWeight: 700, marginBottom: 4, fontSize: 14 }}>
+      <div style={{ color: "#0891b2", fontWeight: 700, marginBottom: 3, fontSize: 13 }}>
         Day {Math.round(d.day) + 1} — {d.ds}
-      </div>
-      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 5 }}>
-        Rx: {d.vN}mg vort + {d.pN}mg prozac
       </div>
       {payload.filter((p, i, arr) =>
         // only named entries, ignore fills, deduplicate by name, hide raw cS
@@ -39,3 +37,12 @@ export default function ChartTooltip({ active, payload }) {
     </div>
   );
 }
+
+/** Standard tooltip props to use across all charts — pinned to top-left, no overflow */
+export const TOOLTIP_PROPS = {
+  trigger: "click",
+  cursor: { stroke: "#94a3b8", strokeDasharray: "3 3" },
+  position: { x: 0, y: 0 },
+  wrapperStyle: { pointerEvents: "none", zIndex: 1000 },
+  allowEscapeViewBox: { x: false, y: false },
+};
