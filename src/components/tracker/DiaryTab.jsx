@@ -22,6 +22,12 @@ const MOODS = [
   { value: 5, label: "Great",     color: "#16a34a" },
 ];
 
+const OPTIONAL_RATINGS = [
+  { key: "sleep",  label: "Sleep quality",      icon: "🛏" },
+  { key: "work",   label: "Work efficiency",    icon: "💼" },
+  { key: "family", label: "Family interaction",  icon: "👨‍👩‍👧" },
+];
+
 const START_DATE = new Date("2026-02-12");
 
 function dayToDateStr(dayN) {
@@ -64,12 +70,31 @@ function rowToEntry(row) {
   };
 }
 
+function parseNotes(raw) {
+  if (!raw) return { text: "", sleep: null, work: null, family: null };
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === "object" && parsed !== null && "text" in parsed)
+      return { text: parsed.text || "", sleep: parsed.sleep ?? null, work: parsed.work ?? null, family: parsed.family ?? null };
+  } catch { /* not JSON, treat as plain text */ }
+  return { text: raw, sleep: null, work: null, family: null };
+}
+
+function serializeNotes(text, sleep, work, family) {
+  if (!sleep && !work && !family) return text || "";
+  return JSON.stringify({ text: text || "", sleep: sleep || null, work: work || null, family: family || null });
+}
+
 function rowToDaily(row) {
+  const n = parseNotes(row.notes);
   return {
     id: row.id,
     mood: row.mood,
     sideEffects: row.side_effects || [],
-    notes: row.notes || "",
+    notes: n.text,
+    sleep: n.sleep,
+    work: n.work,
+    family: n.family,
   };
 }
 
@@ -92,6 +117,9 @@ export default function DiaryTab({ tN }) {
   const [dailyMood, setDailyMood] = useState(3);
   const [dailySE, setDailySE] = useState([]);
   const [dailyNotes, setDailyNotes] = useState("");
+  const [dailySleep, setDailySleep] = useState(null);
+  const [dailyWork, setDailyWork] = useState(null);
+  const [dailyFamily, setDailyFamily] = useState(null);
   const [showDailyForm, setShowDailyForm] = useState(false);
 
   // Fetch entries for current day
@@ -226,15 +254,16 @@ export default function DiaryTab({ tN }) {
 
   // Daily check-in handlers
   const handleDailySubmit = async () => {
+    const notesStr = serializeNotes(dailyNotes, dailySleep, dailyWork, dailyFamily);
     const row = {
       date: dateKey, drug: "__daily__", dose: "",
       time: "00:00", mood: dailyMood,
-      side_effects: dailySE, notes: dailyNotes,
+      side_effects: dailySE, notes: notesStr,
     };
     try {
       if (daily?.id) {
         const { error } = await supabase.from("diary_entries")
-          .update({ mood: dailyMood, side_effects: dailySE, notes: dailyNotes })
+          .update({ mood: dailyMood, side_effects: dailySE, notes: notesStr })
           .eq("id", daily.id);
         if (error) throw error;
       } else {
@@ -244,7 +273,7 @@ export default function DiaryTab({ tN }) {
       setSynced(true);
     } catch {
       const dLocal = loadDailyLocal();
-      dLocal[dateKey] = { id: daily?.id || Date.now(), mood: dailyMood, sideEffects: dailySE, notes: dailyNotes };
+      dLocal[dateKey] = { id: daily?.id || Date.now(), mood: dailyMood, sideEffects: dailySE, notes: dailyNotes, sleep: dailySleep, work: dailyWork, family: dailyFamily };
       saveDailyLocal(dLocal);
       setSynced(false);
     }
@@ -257,10 +286,16 @@ export default function DiaryTab({ tN }) {
       setDailyMood(daily.mood);
       setDailySE(daily.sideEffects || []);
       setDailyNotes(daily.notes || "");
+      setDailySleep(daily.sleep ?? null);
+      setDailyWork(daily.work ?? null);
+      setDailyFamily(daily.family ?? null);
     } else {
       setDailyMood(3);
       setDailySE([]);
       setDailyNotes("");
+      setDailySleep(null);
+      setDailyWork(null);
+      setDailyFamily(null);
     }
     setShowDailyForm(true);
   };
@@ -461,6 +496,23 @@ export default function DiaryTab({ tN }) {
               </div>
             )}
           </div>
+          {(daily.sleep || daily.work || daily.family) && (
+            <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+              {OPTIONAL_RATINGS.map(({ key, label, icon }) => {
+                const v = daily[key];
+                if (!v) return null;
+                const c = MOODS[v - 1]?.color || "#a3a3a3";
+                return (
+                  <span key={key} style={{
+                    fontSize: 11, padding: "2px 7px", borderRadius: 5,
+                    background: c + "14", color: c, fontWeight: 600,
+                  }}>
+                    {icon} {label.split(" ")[0]} {v}/5
+                  </span>
+                );
+              })}
+            </div>
+          )}
           {daily.notes && (
             <p style={{ margin: "6px 0 0", fontSize: 12, color: "#64748b", fontStyle: "italic" }}>
               {daily.notes}
@@ -520,6 +572,45 @@ export default function DiaryTab({ tN }) {
                 );
               })}
             </div>
+          </div>
+
+          {/* Optional ratings */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 6 }}>
+              Optional ratings
+            </label>
+            {OPTIONAL_RATINGS.map(({ key, label, icon }) => {
+              const val = key === "sleep" ? dailySleep : key === "work" ? dailyWork : dailyFamily;
+              const setter = key === "sleep" ? setDailySleep : key === "work" ? setDailyWork : setDailyFamily;
+              return (
+                <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: "#64748b", minWidth: 110, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 14 }}>{icon}</span> {label}
+                  </span>
+                  <div style={{ display: "flex", gap: 3 }}>
+                    {[1, 2, 3, 4, 5].map(n => {
+                      const active = val === n;
+                      const c = MOODS[n - 1]?.color || "#a3a3a3";
+                      return (
+                        <button
+                          key={n}
+                          onClick={() => setter(active ? null : n)}
+                          style={{
+                            width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                            border: `1.5px solid ${active ? c : "#e2e8f0"}`,
+                            background: active ? c + "18" : "#f8fafc",
+                            fontSize: 12, fontWeight: 700,
+                            color: active ? c : "#cbd5e1",
+                          }}
+                        >
+                          {n}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Notes */}
