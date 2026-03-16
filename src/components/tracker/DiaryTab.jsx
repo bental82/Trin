@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 const STORAGE_KEY = "trin-pill-diary";
 
@@ -14,11 +15,11 @@ const SIDE_EFFECTS = [
 ];
 
 const MOODS = [
-  { value: 1, label: "Very low",  emoji: "😞" },
-  { value: 2, label: "Low",       emoji: "😕" },
-  { value: 3, label: "Neutral",   emoji: "😐" },
-  { value: 4, label: "Good",      emoji: "🙂" },
-  { value: 5, label: "Great",     emoji: "😊" },
+  { value: 1, label: "Very low",  emoji: "\u{1F61E}" },
+  { value: 2, label: "Low",       emoji: "\u{1F615}" },
+  { value: 3, label: "Neutral",   emoji: "\u{1F610}" },
+  { value: 4, label: "Good",      emoji: "\u{1F642}" },
+  { value: 5, label: "Great",     emoji: "\u{1F60A}" },
 ];
 
 const START_DATE = new Date("2026-02-12");
@@ -35,21 +36,37 @@ function dayToLabel(dayN) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function loadDiary() {
+// localStorage fallback
+function loadLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch { return {}; }
 }
-
-function saveDiary(diary) {
+function saveLocal(diary) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(diary));
 }
 
+// Convert Supabase row to local entry shape
+function rowToEntry(row) {
+  return {
+    id: row.id,
+    drug: row.drug,
+    dose: row.dose,
+    time: row.time,
+    mood: row.mood,
+    sideEffects: row.side_effects || [],
+    notes: row.notes || "",
+  };
+}
+
 export default function DiaryTab({ tN }) {
-  const [diary, setDiary] = useState(loadDiary);
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [synced, setSynced] = useState(null); // null=loading, true=cloud, false=offline
+  const [totalStats, setTotalStats] = useState({ entries: 0, days: 0 });
+
   const dateKey = dayToDateStr(tN);
-  const entries = diary[dateKey] || [];
 
   // Form state
   const [drug, setDrug] = useState("trintellix");
@@ -64,41 +81,123 @@ export default function DiaryTab({ tN }) {
   const [showForm, setShowForm] = useState(false);
   const [editIdx, setEditIdx] = useState(null);
 
+  // Fetch entries for current day
+  const fetchEntries = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("diary_entries")
+        .select("*")
+        .eq("date", dateKey)
+        .order("time", { ascending: true });
+
+      if (error) throw error;
+      setEntries(data.map(rowToEntry));
+      setSynced(true);
+
+      // Also cache to localStorage
+      const local = loadLocal();
+      local[dateKey] = data.map(rowToEntry);
+      saveLocal(local);
+    } catch {
+      // Fallback to localStorage
+      const local = loadLocal();
+      setEntries(local[dateKey] || []);
+      setSynced(false);
+    }
+    setLoading(false);
+  }, [dateKey]);
+
+  // Fetch total stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const { count } = await supabase
+        .from("diary_entries")
+        .select("*", { count: "exact", head: true });
+
+      const { data: dates } = await supabase
+        .from("diary_entries")
+        .select("date");
+
+      const uniqueDays = new Set(dates?.map(d => d.date)).size;
+      setTotalStats({ entries: count || 0, days: uniqueDays });
+    } catch {
+      const local = loadLocal();
+      const totalEntries = Object.values(local).reduce((sum, arr) => sum + arr.length, 0);
+      setTotalStats({ entries: totalEntries, days: Object.keys(local).length });
+    }
+  }, []);
+
+  useEffect(() => { fetchEntries(); fetchStats(); }, [fetchEntries, fetchStats]);
+
   // Reset dose when drug changes
   useEffect(() => {
     const d = DRUGS.find(d => d.id === drug);
     if (d) setDose(d.doses[0]);
   }, [drug]);
 
-  const persist = useCallback((updated) => {
-    setDiary(updated);
-    saveDiary(updated);
-  }, []);
-
-  const handleSubmit = () => {
-    const entry = {
-      id: editIdx !== null ? entries[editIdx].id : Date.now(),
-      drug, dose, time, mood, sideEffects, notes,
+  const handleSubmit = async () => {
+    const row = {
+      date: dateKey,
+      drug, dose, time, mood,
+      side_effects: sideEffects,
+      notes,
     };
-    const updated = { ...diary };
-    const dayEntries = [...entries];
-    if (editIdx !== null) {
-      dayEntries[editIdx] = entry;
-    } else {
-      dayEntries.push(entry);
+
+    try {
+      if (editIdx !== null) {
+        const entry = entries[editIdx];
+        const { error } = await supabase
+          .from("diary_entries")
+          .update(row)
+          .eq("id", entry.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("diary_entries")
+          .insert(row);
+        if (error) throw error;
+      }
+      setSynced(true);
+    } catch {
+      // Offline fallback: save to localStorage
+      const local = loadLocal();
+      const dayEntries = [...(local[dateKey] || [])];
+      const localEntry = { id: editIdx !== null ? entries[editIdx].id : Date.now(), drug, dose, time, mood, sideEffects, notes };
+      if (editIdx !== null) {
+        dayEntries[editIdx] = localEntry;
+      } else {
+        dayEntries.push(localEntry);
+      }
+      local[dateKey] = dayEntries;
+      saveLocal(local);
+      setSynced(false);
     }
-    updated[dateKey] = dayEntries;
-    persist(updated);
+
     resetForm();
+    fetchEntries();
+    fetchStats();
   };
 
-  const handleDelete = (idx) => {
-    const updated = { ...diary };
-    const dayEntries = [...entries];
-    dayEntries.splice(idx, 1);
-    if (dayEntries.length === 0) delete updated[dateKey];
-    else updated[dateKey] = dayEntries;
-    persist(updated);
+  const handleDelete = async (idx) => {
+    const entry = entries[idx];
+    try {
+      const { error } = await supabase
+        .from("diary_entries")
+        .delete()
+        .eq("id", entry.id);
+      if (error) throw error;
+    } catch {
+      const local = loadLocal();
+      const dayEntries = [...(local[dateKey] || [])];
+      dayEntries.splice(idx, 1);
+      if (dayEntries.length === 0) delete local[dateKey];
+      else local[dateKey] = dayEntries;
+      saveLocal(local);
+      setSynced(false);
+    }
+    fetchEntries();
+    fetchStats();
   };
 
   const handleEdit = (idx) => {
@@ -131,24 +230,37 @@ export default function DiaryTab({ tN }) {
 
   const drugInfo = DRUGS.find(d => d.id === drug);
 
-  // Count total entries across all days
-  const totalEntries = Object.values(diary).reduce((sum, arr) => sum + arr.length, 0);
-  const totalDays = Object.keys(diary).length;
-
   return (
     <div>
       <div style={{ marginBottom: 14 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
-          Pill Diary · D{tN + 1}
-        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
+            Pill Diary \u00B7 D{tN + 1}
+          </h2>
+          {synced !== null && (
+            <span style={{
+              fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600,
+              background: synced ? "#dcfce7" : "#fef3c7",
+              color: synced ? "#166534" : "#92400e",
+            }}>
+              {synced ? "\u2601 Synced" : "\u{1F4F1} Offline"}
+            </span>
+          )}
+        </div>
         <p style={{ margin: "3px 0 0", fontSize: 14, color: "#64748b" }}>
-          {dayToLabel(tN)} · {entries.length} {entries.length === 1 ? "entry" : "entries"}
-          {totalDays > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: "#94a3b8" }}>({totalEntries} total across {totalDays} days)</span>}
+          {dayToLabel(tN)} \u00B7 {entries.length} {entries.length === 1 ? "entry" : "entries"}
+          {totalStats.days > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: "#94a3b8" }}>({totalStats.entries} total across {totalStats.days} days)</span>}
         </p>
       </div>
 
+      {loading && (
+        <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>
+          Loading...
+        </div>
+      )}
+
       {/* Entries for selected day */}
-      {entries.length > 0 && (
+      {!loading && entries.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
           {entries.map((e, idx) => {
             const di = DRUGS.find(d => d.id === e.drug);
@@ -209,7 +321,7 @@ export default function DiaryTab({ tN }) {
         </div>
       )}
 
-      {entries.length === 0 && !showForm && (
+      {!loading && entries.length === 0 && !showForm && (
         <div style={{
           padding: 24, borderRadius: 12, background: "#f8fafc",
           border: "1px dashed #cbd5e1", textAlign: "center", marginBottom: 14,
