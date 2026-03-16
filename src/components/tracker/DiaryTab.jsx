@@ -104,7 +104,7 @@ export default function DiaryTab({ tN }) {
         .select("*")
         .eq("date", dateKey)
         .neq("drug", "__daily__")
-        .order("created_at", { ascending: true });
+        .order("id", { ascending: true });
       if (error) throw error;
       setEntries(data.map(rowToEntry));
 
@@ -165,7 +165,7 @@ export default function DiaryTab({ tN }) {
 
   // Pill entry handlers
   const handlePillSubmit = async () => {
-    const row = { date: dateKey, drug, dose, time: "00:00", mood: 0, side_effects: [], notes: "" };
+    const row = { date: dateKey, drug, dose, time: "00:00", mood: 3, side_effects: [], notes: "" };
     try {
       if (editIdx !== null) {
         const entry = entries[editIdx];
