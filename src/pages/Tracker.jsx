@@ -10,6 +10,7 @@ import PlasmaTab     from "@/components/tracker/PlasmaTab";
 import LearnTab      from "@/components/tracker/LearnTab";
 import GlossaryTab   from "@/components/tracker/GlossaryTab";
 import BridgeTab     from "@/components/tracker/BridgeTab";
+import DiaryTab      from "@/components/tracker/DiaryTab";
 import { Pill } from "lucide-react";
 
 const DATA_TABS = [
@@ -123,7 +124,7 @@ export default function Tracker() {
     },
   ];
 
-  const activeGroup = tab === "today" ? "today" : DATA_TABS.some(t => t.id === tab) ? "data" : "info";
+  const activeGroup = tab === "today" ? "today" : tab === "diary" ? "diary" : DATA_TABS.some(t => t.id === tab) ? "data" : "info";
 
   return (
     <div style={{
@@ -313,6 +314,18 @@ export default function Tracker() {
           >
             📊 Today
           </button>
+          <button
+            onClick={() => { setTabGroup("diary"); setTab("diary"); }}
+            style={{
+              padding: "6px 14px", borderRadius: "8px 8px 0 0",
+              border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700,
+              background: tab === "diary" ? "#fdf2f8" : "transparent",
+              color: tab === "diary" ? "#be185d" : "#64748b",
+              borderBottom: tab === "diary" ? "2px solid #be185d" : "2px solid transparent",
+            }}
+          >
+            💊 Diary
+          </button>
           {[["data", "📈 Charts"], ["info", "📚 Learn"]].map(([g, lbl]) => (
             <button
               key={g}
@@ -336,7 +349,7 @@ export default function Tracker() {
 
         {/* Sub-tabs — hidden when Today is active */}
         <div style={{
-          display: activeGroup === "today" ? "none" : "flex", gap: 2, padding: "8px 16px 0",
+          display: (activeGroup === "today" || activeGroup === "diary") ? "none" : "flex", gap: 2, padding: "8px 16px 0",
           overflowX: "auto", scrollbarWidth: "none",
         }}>
           {(activeGroup === "data" ? DATA_TABS : INFO_TABS).map(({ id, label }) => {
@@ -362,6 +375,7 @@ export default function Tracker() {
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
         {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} strategyLabel={strategyLabel} />}
+        {tab === "diary"    && <DiaryTab tN={tN} />}
         {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
         {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
