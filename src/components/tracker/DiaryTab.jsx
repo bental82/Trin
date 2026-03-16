@@ -15,11 +15,11 @@ const SIDE_EFFECTS = [
 ];
 
 const MOODS = [
-  { value: 1, label: "Very low",  emoji: "\u{1F61E}" },
-  { value: 2, label: "Low",       emoji: "\u{1F615}" },
-  { value: 3, label: "Neutral",   emoji: "\u{1F610}" },
-  { value: 4, label: "Good",      emoji: "\u{1F642}" },
-  { value: 5, label: "Great",     emoji: "\u{1F60A}" },
+  { value: 1, label: "Very low",  emoji: "😞" },
+  { value: 2, label: "Low",       emoji: "😕" },
+  { value: 3, label: "Neutral",   emoji: "😐" },
+  { value: 4, label: "Good",      emoji: "🙂" },
+  { value: 5, label: "Great",     emoji: "😊" },
 ];
 
 const START_DATE = new Date("2026-02-12");
@@ -235,7 +235,7 @@ export default function DiaryTab({ tN }) {
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
-            Pill Diary \u00B7 D{tN + 1}
+            Pill Diary · D{tN + 1}
           </h2>
           {synced !== null && (
             <span style={{
@@ -243,12 +243,12 @@ export default function DiaryTab({ tN }) {
               background: synced ? "#dcfce7" : "#fef3c7",
               color: synced ? "#166534" : "#92400e",
             }}>
-              {synced ? "\u2601 Synced" : "\u{1F4F1} Offline"}
+              {synced ? "☁ Synced" : "📱 Offline"}
             </span>
           )}
         </div>
         <p style={{ margin: "3px 0 0", fontSize: 14, color: "#64748b" }}>
-          {dayToLabel(tN)} \u00B7 {entries.length} {entries.length === 1 ? "entry" : "entries"}
+          {dayToLabel(tN)} · {entries.length} {entries.length === 1 ? "entry" : "entries"}
           {totalStats.days > 0 && <span style={{ marginLeft: 8, fontSize: 12, color: "#94a3b8" }}>({totalStats.entries} total across {totalStats.days} days)</span>}
         </p>
       </div>
