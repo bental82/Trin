@@ -47,6 +47,22 @@ function makeTaperDose14(todayN) {
   };
 }
 
+function makeT15Dose(todayN) {
+  return d => {
+    if (d < 0) return [0, 40];
+    if (d === 0) return [5, 20];
+    if (d <= 7) return [10, 20];
+    if (d < todayN) return [10, 0];
+    const bd = d - todayN;
+    // Bridge phase: 14 days alternating P20+T10 / T20
+    if (bd >= 0 && bd < 14) {
+      return (bd % 2 === 0) ? [10, 20] : [20, 0];
+    }
+    // Maintenance: T10/T20 alternating forever (avg T15), no P20
+    return (bd % 2 === 0) ? [10, 0] : [20, 0];
+  };
+}
+
 const doseGradual = d => {
   if (d < 0) return [0, 40];
   if (d <= 6) return [5, 30];
@@ -105,7 +121,7 @@ function gen(doseFn, pdFn, extraStressFn, boostFn) {
 function Tip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const day = payload[0]?.payload?.day;
-  const skip = new Set(["wbF", "stF", "b10F", "b14F", "grF", "tpF", "tp14F"]);
+  const skip = new Set(["wbF", "stF", "b10F", "b14F", "grF", "tpF", "tp14F", "t15F"]);
   return (
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,.1)", maxWidth: 240 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: "#334155" }}>Day {(day ?? 0) + 1}</div>
@@ -120,7 +136,7 @@ function Tip({ active, payload }) {
 }
 
 export default function BridgeTab() {
-  const [show, setShow] = useState({ grad: false, b10: true, b14: true, taper: true, taper14: true, pk: false, pd: false, st: false });
+  const [show, setShow] = useState({ grad: false, b10: true, b14: true, taper: true, taper14: true, t15: true, pk: false, pd: false, st: false });
   const tog = k => setShow(s => ({ ...s, [k]: !s[k] }));
 
   // Compute TODAY_N lazily so it's fresh if app stays open overnight
@@ -133,16 +149,19 @@ export default function BridgeTab() {
   const doseBridge14 = useMemo(() => makeBridgeDose(BRIDGE_START, 14), []);
   const doseTaper    = useMemo(() => makeTaperDose(BRIDGE_START), []);
   const doseTpr14   = useMemo(() => makeTaperDose14(BRIDGE_START), []);
+  const doseT15     = useMemo(() => makeT15Dose(BRIDGE_START), []);
 
   const stress10d   = useMemo(() => makeBridgeStress(BRIDGE_START, 10, 2.0, 6, 5, 2), []);
   const stress14d   = useMemo(() => makeBridgeStress(BRIDGE_START, 14, 2.8, 7, 6, 1.8), []);
   const stressTaper = useMemo(() => makeBridgeStress(BRIDGE_START, 15, 0.8, 5, 4, 2.5), []);
   const stressTpr14 = useMemo(() => makeBridgeStress(BRIDGE_START, 21, 0.6, 5, 5, 2.5), []);
+  const stressT15   = useMemo(() => makeBridgeStress(BRIDGE_START, 14, 0.5, 4, 5, 2.5), []);
 
   const boost10d   = useMemo(() => makeBridgeBoost(BRIDGE_START, 15), []);
   const boost14d   = useMemo(() => makeBridgeBoost(BRIDGE_START, 19), []);
   const boostTaper = useMemo(() => makeBridgeBoost(BRIDGE_START, 20), []);
   const boostTpr14 = useMemo(() => makeBridgeBoost(BRIDGE_START, 26), []);
+  const boostT15   = useMemo(() => makeBridgeBoost(BRIDGE_START, 20), []);
 
   const tl      = useMemo(() => gen(doseActual, computePD), []);
   const tlGrad  = useMemo(() => gen(doseGradual, pdGradual), []);
@@ -150,6 +169,7 @@ export default function BridgeTab() {
   const tlB14   = useMemo(() => gen(doseBridge14, computePD, stress14d, boost14d), [doseBridge14, stress14d, boost14d]);
   const tlTaper = useMemo(() => gen(doseTaper, computePD, stressTaper, boostTaper), [doseTaper, stressTaper, boostTaper]);
   const tlTpr14 = useMemo(() => gen(doseTpr14, computePD, stressTpr14, boostTpr14), [doseTpr14, stressTpr14, boostTpr14]);
+  const tlT15   = useMemo(() => gen(doseT15, computePD, stressT15, boostT15), [doseT15, stressT15, boostT15]);
 
   const data = useMemo(() => tl.map((d, i) => ({
     ...d,
@@ -158,7 +178,8 @@ export default function BridgeTab() {
     b14WB: i >= BRIDGE_START ? (tlB14[i]?.wellbeing ?? null) : null,
     taperWB: i >= BRIDGE_START ? (tlTaper[i]?.wellbeing ?? null) : null,
     taper14WB: i >= BRIDGE_START ? (tlTpr14[i]?.wellbeing ?? null) : null,
-  })), [tl, tlGrad, tlB10, tlB14, tlTaper, tlTpr14, todayN]);
+    t15WB: i >= BRIDGE_START ? (tlT15[i]?.wellbeing ?? null) : null,
+  })), [tl, tlGrad, tlB10, tlB14, tlTaper, tlTpr14, tlT15, todayN]);
 
   const todayD = data.find(d => d.day === todayN);
   const minA = tl.reduce((m, d) => d.wellbeing < m.wellbeing ? d : m, tl[0]);
@@ -186,6 +207,7 @@ export default function BridgeTab() {
         <Btn on={show.b14} onClick={() => tog("b14")} color="#e11d48" bg="#fff1f2">{"\u{1F48A}"} P20×14d</Btn>
         <Btn on={show.taper} onClick={() => tog("taper")} color="#0891b2" bg="#f0f9ff">{"\u{1F48A}"} P20+alt 8d</Btn>
         <Btn on={show.taper14} onClick={() => tog("taper14")} color="#7c3aed" bg="#f5f3ff">{"\u{1F48A}"} P20+alt 14d</Btn>
+        <Btn on={show.t15} onClick={() => tog("t15")} color="#059669" bg="#ecfdf5">{"\u{1F48A}"} T15</Btn>
         <Btn on={show.pk} onClick={() => tog("pk")} color="#06b6d4" bg="#ecfeff">PK</Btn>
         <Btn on={show.pd} onClick={() => tog("pd")} color="#a78bfa" bg="#f5f3ff">PD</Btn>
         <Btn on={show.st} onClick={() => tog("st")} color="#ef4444" bg="#fef2f2">Stress</Btn>
@@ -200,6 +222,7 @@ export default function BridgeTab() {
             <linearGradient id="bb14g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e11d48" stopOpacity={0.1} /><stop offset="100%" stopColor="#e11d48" stopOpacity={0.02} /></linearGradient>
             <linearGradient id="btpg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0891b2" stopOpacity={0.12} /><stop offset="100%" stopColor="#0891b2" stopOpacity={0.02} /></linearGradient>
             <linearGradient id="btp14g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7c3aed" stopOpacity={0.12} /><stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} /></linearGradient>
+            <linearGradient id="bt15g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#059669" stopOpacity={0.12} /><stop offset="100%" stopColor="#059669" stopOpacity={0.02} /></linearGradient>
             <linearGradient id="bstg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity={0.1} /><stop offset="100%" stopColor="#ef4444" stopOpacity={0.02} /></linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -224,6 +247,11 @@ export default function BridgeTab() {
               <ReferenceLine x={BRIDGE_START + 21} stroke="#7c3aed30" strokeDasharray="3 3" label={{ value: "P off", fill: "#7c3aed60", fontSize: 7, position: "bottom" }} />
             </>
           )}
+          {show.t15 && (
+            <>
+              <ReferenceLine x={BRIDGE_START + 14} stroke="#05966940" strokeDasharray="3 3" label={{ value: "T15\u2192", fill: "#05966980", fontSize: 7, position: "bottom" }} />
+            </>
+          )}
 
           <Area type="monotone" dataKey="wellbeing" fill="url(#bwg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="wbF" isAnimationActive={false} />
           {show.st && <Area type="monotone" dataKey="stressScore" fill="url(#bstg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="stF" isAnimationActive={false} />}
@@ -232,6 +260,7 @@ export default function BridgeTab() {
           {show.b14 && <Area type="monotone" dataKey="b14WB" fill="url(#bb14g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="b14F" isAnimationActive={false} connectNulls={false} />}
           {show.taper && <Area type="monotone" dataKey="taperWB" fill="url(#btpg)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tpF" isAnimationActive={false} connectNulls={false} />}
           {show.taper14 && <Area type="monotone" dataKey="taper14WB" fill="url(#btp14g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="tp14F" isAnimationActive={false} connectNulls={false} />}
+          {show.t15 && <Area type="monotone" dataKey="t15WB" fill="url(#bt15g)" fillOpacity={1} stroke="none" activeDot={false} legendType="none" tooltipType="none" name="t15F" isAnimationActive={false} connectNulls={false} />}
 
           <Line type="monotone" dataKey="wellbeing" stroke="#22c55e" strokeWidth={2.5} dot={false} name="Actual" />
           {show.grad && <Line type="monotone" dataKey="gradWB" stroke="#8b5cf6" strokeWidth={2} dot={false} strokeDasharray="8 4" name="Gradual" />}
@@ -239,6 +268,7 @@ export default function BridgeTab() {
           {show.b14 && <Line type="monotone" dataKey="b14WB" stroke="#e11d48" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name={"P20\u00d714d"} connectNulls={false} />}
           {show.taper && <Line type="monotone" dataKey="taperWB" stroke="#0891b2" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 8d" connectNulls={false} />}
           {show.taper14 && <Line type="monotone" dataKey="taper14WB" stroke="#7c3aed" strokeWidth={2.5} dot={false} strokeDasharray="6 3" name="P20+alt 14d" connectNulls={false} />}
+          {show.t15 && <Line type="monotone" dataKey="t15WB" stroke="#059669" strokeWidth={2.5} dot={false} strokeDasharray="4 2" name="T15" connectNulls={false} />}
           {show.pk && <Line type="monotone" dataKey="pkScore" stroke="#06b6d4" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PK Ceiling" />}
           {show.pd && <Line type="monotone" dataKey="pdScore" stroke="#a78bfa" strokeWidth={1} dot={false} strokeDasharray="4 3" name="PD Maturation" />}
           {show.st && <Line type="monotone" dataKey="stressScore" stroke="#ef4444" strokeWidth={1} dot={false} strokeDasharray="3 3" name="Stress" />}
@@ -248,7 +278,7 @@ export default function BridgeTab() {
       </ResponsiveContainer>
 
       {/* Strategy cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginTop: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4, marginTop: 12 }}>
         {[
           { label: "ACTUAL", sub: "Fast taper", color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0",
             val: todayD?.wellbeing, vl: "now", note: `Dip ${minA.wellbeing.toFixed(1)}`, nc: "#ef4444", on: true },
@@ -260,6 +290,8 @@ export default function BridgeTab() {
             val: tlTaper.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.8", nc: "#16a34a", on: show.taper },
           { label: "ALT 14d", sub: "7d+14d taper", color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd",
             val: tlTpr14.find(d => d.day === BRIDGE_START + 5)?.wellbeing, vl: "mid", note: "Dip ~0.6", nc: "#16a34a", on: show.taper14 },
+          { label: "T15", sub: "alt dose 4ever", color: "#059669", bg: "#ecfdf5", border: "#6ee7b7",
+            val: tlT15.find(d => d.day === BRIDGE_START + 7)?.wellbeing, vl: "mid", note: "Dip ~0.5", nc: "#059669", on: show.t15 },
         ].map((c, i) => (
           <div key={i} style={{ padding: "10px 6px", borderRadius: 10, background: c.on ? c.bg : "#f8fafc", border: `1px solid ${c.on ? c.border : "#e2e8f0"}`, opacity: c.on ? 1 : 0.3, textAlign: "center" }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: c.color }}>{c.label}</div>
@@ -274,7 +306,7 @@ export default function BridgeTab() {
       {/* Dosing comparison */}
       <div style={{ margin: "12px 0", padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid #e2e8f0" }}>
         <div style={{ fontWeight: 700, fontSize: 12, color: "#334155", marginBottom: 8 }}>Dosing Comparison</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, fontSize: 11 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 10, fontSize: 11 }}>
           <div>
             <div style={{ fontWeight: 700, color: "#d97706", marginBottom: 3 }}>P20×10d</div>
             <div style={{ color: "#64748b" }}>P20 daily × 10d</div>
@@ -301,6 +333,13 @@ export default function BridgeTab() {
             <div style={{ color: "#64748b" }}>Then T10 only</div>
             <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>14 doses · softer taper</div>
           </div>
+          <div>
+            <div style={{ fontWeight: 700, color: "#059669", marginBottom: 3 }}>T15</div>
+            <div style={{ color: "#64748b" }}>14d: P20+T10 / T20 alt</div>
+            <div style={{ color: "#64748b" }}>Then T10/T20 alt forever</div>
+            <div style={{ color: "#64748b" }}>Avg T15 maintenance</div>
+            <div style={{ color: "#94a3b8", fontSize: 10, marginTop: 2 }}>7 P20 doses · dual alt</div>
+          </div>
         </div>
       </div>
 
@@ -315,6 +354,8 @@ export default function BridgeTab() {
           <br /><br />
           <b>P20 + alt 14d</b> — כיסוי ארוך יותר: 21 ימים (7d רציף + 14d יום כן יום). 14 מנות alt days שומרות על רמות נורפלואוקסטין נמוכות ויציבות. Dip ~0.6 — הנמוך מכל האסטרטגיות. כיסוי PD ארוך יותר.
           <br /><br />
+          <b>T15 (אסטרטגיית מינון כפול מתחלף)</b> — 14 ימי גישור עם P20+T10 ביום כן ו-T20 ביום לא. P20 כל יום שני מוריד נורפלואוקסטין בהדרגה, ובמקביל T מתחלף בין 10 ל-20 (ממוצע T15). אחרי 14 יום — P20 נעצר, T10/T20 alt ממשיך לתמיד. Dip ~0.5 — הנמוך מכולם. יתרון ייחודי: מינון T גבוה יותר (ממוצע 15mg) מגביר SERT occupancy ו-5-HT receptor coverage לטווח ארוך.
+          <br /><br />
           <b>כלל אצבע:</b> ככל שיותר ימים של P20 רציף → יותר הצטברות → יותר dip בעצירה. alt days שובר את הדפוס הזה. alt 14d ממשיך את ההגנה עוד יותר.
         </div>
       </div>
@@ -323,7 +364,7 @@ export default function BridgeTab() {
       <div style={{ margin: "12px 0 0", padding: "16px 18px", borderRadius: 12, background: "linear-gradient(135deg, #ecfdf5, #f0f9ff)", border: "2px solid #6ee7b7" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <span style={{ fontSize: 22 }}>{"\u{1F3C6}"}</span>
-          <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46" }}>השוואת המלצות: alt 8d vs alt 14d</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46" }}>השוואת המלצות: alt 8d vs alt 14d vs T15</div>
         </div>
         <div style={{ fontSize: 13, color: "#164e63", lineHeight: 1.8, direction: "rtl", textAlign: "right" }}>
           <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 10px", marginBottom: 10 }}>
@@ -332,6 +373,8 @@ export default function BridgeTab() {
             <span>{"\u{1F9EC}"}</span><span><b>למה alt days עובד:</b> ימי הפסקה נותנים לנורפלואוקסטין (t½≈9d) לרדת בהדרגה במקום הצטברות ועצירה חדה</span>
             <span>{"\u23F1\uFE0F"}</span><span><b>alt 14d יתרון:</b> 21 ימי כיסוי מגשרים גם על חלון ה-BDNF וה-DMN, לא רק autoreceptor + GABA</span>
             <span>{"\u{1F4C9}"}</span><span><b>מחיר:</b> alt 14d = 3 מנות נוספות (14 vs 11), אבל עומס CYP נמוך כי זה יום כן יום</span>
+            <span>{"\u{1F48A}"}</span><span><b>T15:</b> P20+T10 / T20 מתחלף × 14d, ואז T10/T20 alt לתמיד (ממוצע T15). 7 מנות P20 בלבד. Dip ~0.5 — הנמוך מכולם.</span>
+            <span>{"\u2B50"}</span><span><b>יתרון T15:</b> מינון T ממוצע 15mg (במקום 10mg) = SERT occupancy גבוה יותר לטווח ארוך + כיסוי 5-HT רחב יותר. גישור P20 רך + שדרוג T קבוע.</span>
           </div>
           <div style={{ padding: "10px 12px", borderRadius: 8, background: "#fff7ed", border: "1px solid #fed7aa", fontSize: 12, color: "#92400e", marginTop: 6 }}>
             ⚠️ <b>חשוב:</b> זו המלצה מבוססת מודל PK/PD תיאורטי. יש לדון עם הפסיכיאטר לפני תחילת כל גישור. ההחלטה הסופית צריכה לשלב שיקול קליני ואת התחושות שלך.
