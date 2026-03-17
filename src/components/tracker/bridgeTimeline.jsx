@@ -56,6 +56,22 @@ export function doseUptitrate15w(d) {
   return [20, 0];                                                            // T20 only
 }
 
+// Option C — "T15": P20 alt days with alternating T dosages (T10+P20 / T20), then T15 forever.
+// Bridge: 7d daily T10+P20, then 14d alternating (T10+P20 on even, T20 on odd), then T15 maintenance.
+export function doseT15(d) {
+  if (d < 0) return [0, 40];
+  if (d === 0) return [5, 20];
+  if (d <= 7) return [10, 20];
+  if (d < BRIDGE_START) return [10, 0];
+  const bd = d - BRIDGE_START;
+  if (bd < 7) return [10, 20];                                              // 7d daily P20 + T10
+  if (bd >= 7 && bd < 21) {                                                 // 14d alternating
+    const isP20Day = ((bd - 7) % 2 === 0);
+    return isP20Day ? [10, 20] : [20, 0];                                   // T10+P20 / T20
+  }
+  return [15, 0];                                                            // T15 forever
+}
+
 // P20 step-down: 7d daily → 8d every other day → 6d every 3rd day
 export function doseStepdown(d) {
   if (d < 0) return [0, 40];
@@ -111,6 +127,11 @@ export const bridgeBoostUT  = makeBridgeBoost(26);
 export const bridgeStressUT15w = makeBridgeStress(21, 0.65, 5, 5, 2.5);
 export const bridgeBoostUT15w  = makeBridgeBoost(26);
 
+// T15: alternating T10+P20 / T20 for 14d, then T15 forever.
+// Mixed T dosages give good SERT coverage during bridge; T15 maintenance = moderate stress.
+export const bridgeStressT15 = makeBridgeStress(21, 0.62, 5, 5, 2.5);
+export const bridgeBoostT15  = makeBridgeBoost(26);
+
 // ── Timeline generators ──
 
 function genTimeline(n, doseFn, stressFn, boostFn, cypBase) {
@@ -148,4 +169,8 @@ export function genBridgeTimelineUT(n = 90, cypBase) {
 
 export function genBridgeTimelineUT15w(n = 90, cypBase) {
   return genTimeline(n, doseUptitrate15w, bridgeStressUT15w, bridgeBoostUT15w, cypBase);
+}
+
+export function genBridgeTimelineT15(n = 90, cypBase) {
+  return genTimeline(n, doseT15, bridgeStressT15, bridgeBoostT15, cypBase);
 }

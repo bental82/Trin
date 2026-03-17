@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { genTimeline, computeAll, getDose, computePD, TODAY_N } from "@/components/tracker/pkEngine";
-import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, genBridgeTimelineUT15w, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
+import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, genBridgeTimelineUT15w, genBridgeTimelineT15, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
 import TodayTab      from "@/components/tracker/TodayTab";
 
 import PDTab         from "@/components/tracker/PDTab";
@@ -32,8 +32,8 @@ export default function Tracker() {
   const [showHelp, setShowHelp] = useState(false);
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
-  const [strategy, setStrategy] = useState("uptitrate");  // "alt8" | "alt14" | "stepdown" | "uptitrate" | "ut15wk"
-  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: false, sd: false, ut: true, ut15: false });
+  const [strategy, setStrategy] = useState("uptitrate");  // "alt8" | "alt14" | "stepdown" | "uptitrate" | "ut15wk" | "t15"
+  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: false, sd: false, ut: true, ut15: false, t15: false });
   const [cypFactor, setCypFactor] = useState(2.2);
 
   const tl     = useMemo(() => genTimeline(90, cypFactor), [cypFactor]);
@@ -42,8 +42,9 @@ export default function Tracker() {
   const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90, cypFactor), [cypFactor]);
   const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90, cypFactor), [cypFactor]);
   const tlBridgeUT15w = useMemo(() => genBridgeTimelineUT15w(90, cypFactor), [cypFactor]);
-  const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT, ut15: tlBridgeUT15w }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT, tlBridgeUT15w]);
-  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT, ut15wk: tlBridgeUT15w };
+  const tlBridgeT15 = useMemo(() => genBridgeTimelineT15(90, cypFactor), [cypFactor]);
+  const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT, ut15: tlBridgeUT15w, t15: tlBridgeT15 }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT, tlBridgeUT15w, tlBridgeT15]);
+  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT, ut15wk: tlBridgeUT15w, t15: tlBridgeT15 };
   const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
   const tW     = useMemo(() => computeAll(tN, getDose, computePD, cypFactor), [tN, cypFactor]);
@@ -57,8 +58,8 @@ export default function Tracker() {
     return bd || null;
   }, [tN, tlActive]);
 
-  const strategyLabel = strategy === "alt8" ? "Alt 8d" : strategy === "alt14" ? "Alt 14d" : strategy === "uptitrate" ? "15→20" : strategy === "ut15wk" ? "T15 wk" : "Step-down";
-  const bridgeColor = strategy === "alt8" ? "#0891b2" : strategy === "alt14" ? "#7c3aed" : strategy === "uptitrate" ? "#e11d48" : strategy === "ut15wk" ? "#e11d48" : "#d97706";
+  const strategyLabel = strategy === "alt8" ? "Alt 8d" : strategy === "alt14" ? "Alt 14d" : strategy === "uptitrate" ? "15→20" : strategy === "ut15wk" ? "T15 wk" : strategy === "t15" ? "T15" : "Step-down";
+  const bridgeColor = strategy === "alt8" ? "#0891b2" : strategy === "alt14" ? "#7c3aed" : strategy === "uptitrate" ? "#e11d48" : strategy === "ut15wk" ? "#e11d48" : strategy === "t15" ? "#059669" : "#d97706";
 
   const statCards = [
     {

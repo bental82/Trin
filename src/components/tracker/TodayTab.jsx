@@ -8,6 +8,7 @@ const STRATEGIES = [
   { id: "stepdown",  label: "Step-down",  desc: "7d + 8d q2d + 6d q3d", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
   { id: "uptitrate", label: "T20 fast", desc: "T20 tomorrow", color: "#e11d48", bg: "#fff1f2", border: "#fda4af" },
   { id: "ut15wk",    label: "T15 wk",   desc: "T15 wk1, T20 wk2", color: "#be185d", bg: "#fdf2f8", border: "#f9a8d4" },
+  { id: "t15",       label: "T15",      desc: "T10+P20/T20 alt → T15∞", color: "#059669", bg: "#ecfdf5", border: "#6ee7b7" },
 ];
 
 export default function TodayTab({ tN, statCards, strategy, setStrategy, strategyLabel }) {

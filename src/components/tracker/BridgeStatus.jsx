@@ -1,5 +1,5 @@
 import React from "react";
-import { BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate, doseUptitrate15w } from "./bridgeTimeline";
+import { BRIDGE_START, doseTaper, doseTaper14, doseStepdown, doseUptitrate, doseUptitrate15w, doseT15 } from "./bridgeTimeline";
 
 const STRATEGY_CONFIG = {
   alt8: {
@@ -38,6 +38,13 @@ const STRATEGY_CONFIG = {
       { name: "T10+P20 \u05D9\u05D5\u05DE\u05D9", len: 7 },
       { name: "T15+P20 alt", len: 7 },
       { name: "T20+P20 alt", len: 7 },
+    ],
+  },
+  t15: {
+    doseFn: doseT15,
+    phases: [
+      { name: "T10+P20 \u05D9\u05D5\u05DE\u05D9", len: 7 },
+      { name: "T10+P20/T20 alt", len: 14 },
     ],
   },
 };
