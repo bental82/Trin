@@ -175,16 +175,11 @@ export function computePD(day) {
     glymphatic:     sigmoidWithCarryover(day, 45, 0.08, 100, 14, 0.10),
     // DMN reconfiguration: partial overlap. ~25% carryover.
     dmn:            sigmoidWithCarryover(day, 35, 0.09, 100, 10, 0.25),
-    // Fluoxetine has the lowest discontinuation risk among SSRIs due to
-    // norfluoxetine's ultra-long t½ (223h) acting as a natural taper.
-    // Classical symptoms delayed 4-6 weeks (vs days for paroxetine).
-    // ~50% of patients experience some withdrawal (RESEARCH.md §15).
-    // Amplitude 12: creates a visible ~12-point dip at peak (day 24),
-    // reflecting realistic but mild discontinuation + receptor readjustment.
-    // CYP stress 8: as norfluoxetine clears (weeks 4-6), CYP2D6 inhibition
-    // drops from ~2.6× to ~2.2×, reducing effective vortioxetine dose.
-    norfluoxStress: Math.max(0, 12 * Math.exp(-0.5 * Math.pow((day - 24) / 10, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
-    cypStress:      Math.max(0, 8 * Math.exp(-0.5 * Math.pow((day - 30) / 12, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
+    // Fluoxetine has the lowest discontinuation syndrome risk among SSRIs
+    // due to norfluoxetine's ultra-long half-life acting as a natural taper.
+    // Amplitudes softened (25→8, 15→5) and Gaussians widened to reflect this.
+    norfluoxStress: Math.max(0, 8 * Math.exp(-0.5 * Math.pow((day - 24) / 10, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
+    cypStress:      Math.max(0, 5 * Math.exp(-0.5 * Math.pow((day - 30) / 12, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
   };
 }
 
