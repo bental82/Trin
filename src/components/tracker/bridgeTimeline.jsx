@@ -97,28 +97,29 @@ function makeBridgeStress(endOffset, amplitude, center, width, steepness) {
 }
 
 // Bridge boost: fluoxetine's SERT contribution flows through PK score (via cS),
-// but ad-hoc boost (max 6) keeps strategies with longer Prozac coverage visibly
-// ahead during the bridge phase.
+// but ad-hoc boost (max 5) rewards strategies that maintain Prozac coverage
+// during uptitration — reflects the pharmacological advantage of sustained
+// SERT occupancy during the transition.
 function makeBridgeBoost(coverageDays) {
   return (day, fE) => {
     return (fE > 2 && day >= BRIDGE_START && day < BRIDGE_START + coverageDays)
-      ? Math.min(6, (fE / 20) * 6) : 0;
+      ? Math.min(5, (fE / 20) * 5) : 0;
   };
 }
 
-// Stress amplitudes reduced ~40%: the SERT occupancy cliff now flows through
-// the PK score (via combined SERT cS), so the ad-hoc discontinuation stress
-// only needs to model the non-SERT aspects (receptor downregulation lag,
-// serotonin transient, autonomic readjustment).
-//   Alt 8d:  0.80 → 0.50
-//   Alt 14d: 0.80 → 0.50
-//   Step-down: 0.73 → 0.45
-//   T20 fast: 0.60 → 0.36
-//   T15 wk:  0.65 → 0.40
-//   T15:     0.62 → 0.38
-// Stress amplitudes scaled up (~6×) so strategy differences are clearly
-// visible on the 0-100 wellbeing chart. Ratio between strategies preserved.
-export const bridgeStress   = makeBridgeStress(15, 3.0, 5, 4,   2.5);
+// Bridge-specific stress: models the non-SERT discontinuation aspects
+// (receptor downregulation lag, serotonin transient, autonomic readjustment).
+// Amplitudes calibrated to create ~1.5-3.5 point spread between strategies
+// during the post-bridge dip, reflecting pharmacological reality:
+//   - Shorter Prozac coverage → steeper SERT cliff → more stress
+//   - Higher vortioxetine dose → more SERT compensation → less stress
+//   Alt 8d:    3.5 — shortest bridge, steepest SERT cliff post-bridge
+//   Alt 14d:   3.0 — medium bridge, gentler SERT decline
+//   Step-down: 2.7 — gradual tapering, smoother but slower
+//   T20 fast:  2.0 — highest SERT compensation from T20, least stress
+//   T15 wk:    2.4 — T15 first week provides less SERT than T20 fast
+//   T15:       2.3 — alternating doses, moderate SERT coverage
+export const bridgeStress   = makeBridgeStress(15, 3.5, 5, 4,   2.5);
 export const bridgeBoost    = makeBridgeBoost(20);
 
 export const bridgeStress14 = makeBridgeStress(21, 3.0, 5, 5,   2.5);
@@ -128,7 +129,7 @@ export const bridgeStressSD = makeBridgeStress(21, 2.7, 5, 4.5, 2.5);
 export const bridgeBoostSD  = makeBridgeBoost(24);
 
 // T20 fast: T20 from bd 9, higher SERT means softer cliff
-export const bridgeStressUT = makeBridgeStress(21, 2.2, 5, 5, 2.5);
+export const bridgeStressUT = makeBridgeStress(21, 2.0, 5, 5, 2.5);
 export const bridgeBoostUT  = makeBridgeBoost(26);
 
 // T15 wk: T15 first week then T20, slightly higher stress than T20 fast

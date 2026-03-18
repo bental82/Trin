@@ -175,11 +175,16 @@ export function computePD(day) {
     glymphatic:     sigmoidWithCarryover(day, 45, 0.08, 100, 14, 0.10),
     // DMN reconfiguration: partial overlap. ~25% carryover.
     dmn:            sigmoidWithCarryover(day, 35, 0.09, 100, 10, 0.25),
-    // Fluoxetine has the lowest discontinuation syndrome risk among SSRIs
-    // due to norfluoxetine's ultra-long half-life acting as a natural taper.
-    // Amplitudes softened (25→8, 15→5) and Gaussians widened to reflect this.
-    norfluoxStress: Math.max(0, 8 * Math.exp(-0.5 * Math.pow((day - 24) / 10, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
-    cypStress:      Math.max(0, 5 * Math.exp(-0.5 * Math.pow((day - 30) / 12, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
+    // Fluoxetine has the lowest discontinuation risk among SSRIs due to
+    // norfluoxetine's ultra-long t½ (223h) acting as a natural taper.
+    // Classical symptoms delayed 4-6 weeks (vs days for paroxetine).
+    // ~50% of patients experience some withdrawal (RESEARCH.md §15).
+    // Amplitude 12: creates a visible ~12-point dip at peak (day 24),
+    // reflecting realistic but mild discontinuation + receptor readjustment.
+    // CYP stress 8: as norfluoxetine clears (weeks 4-6), CYP2D6 inhibition
+    // drops from ~2.6× to ~2.2×, reducing effective vortioxetine dose.
+    norfluoxStress: Math.max(0, 12 * Math.exp(-0.5 * Math.pow((day - 24) / 10, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 12)))),
+    cypStress:      Math.max(0, 8 * Math.exp(-0.5 * Math.pow((day - 30) / 12, 2))) * (1 / (1 + Math.exp(-1.2 * (day - 14)))),
   };
 }
 
@@ -247,12 +252,14 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DE
   // Diminishing returns above 100% — going from 80→90% SERT adds less
   // marginal benefit than 50→80%. Factor of 0.6 on excess calibrated to
   // Thase 2016: 20mg vs 10mg = −1.03 MADRS points (Cambridge Core 2021).
-  // trinGain range of 30 gives wellbeing a meaningful arc (60→~90) and
-  // allows strategies to visibly separate on the chart.
+  // trinGain range of 22: calibrated to MADRS evidence — Prozac partial
+  // responder (~MADRS 15, WB 60) → Trintellix 20mg+WB steady state
+  // (~MADRS 8-10, WB ~81). FOCUS trial: 20mg Δ-6.7 MADRS vs placebo;
+  // multimodal cognitive benefit (DSST SES 0.33) adds beyond SERT.
   const pkFactor = pkScore <= 100
     ? pkScore / 100
     : 1 + (pkScore - 100) / 100 * 0.6;
-  const trinGain = pkFactor * (pdScore / 100) * 30;
+  const trinGain = pkFactor * (pdScore / 100) * 22;
   // Transition dip: stress pulls you below baseline temporarily
   const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
   return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
