@@ -160,7 +160,7 @@ export default function BridgeTab({ bridgeShow, setBridgeShow, cypBase = 2.2 }) 
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis dataKey="day" type="number" tick={{ fill: "#64748b", fontSize: 10 }} tickFormatter={v => "D" + (v + 1)} stroke="#e2e8f0" domain={[0, N]} interval={4} />
-          <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 10 }} stroke="#e2e8f0" />
+          <YAxis domain={['dataMin - 5', 'dataMax + 5']} tick={{ fill: "#64748b", fontSize: 10 }} stroke="#e2e8f0" />
           <Tooltip {...TOOLTIP_PROPS} content={<Tip isDelta={false} />} />
 
           <ReferenceLine x={0} stroke="#fbbf2440" strokeDasharray="4 3" label={{ value: "Start", fill: "#fbbf2460", fontSize: 7, position: "top" }} />
