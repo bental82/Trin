@@ -246,13 +246,13 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DE
   // Dose-response: pkScore >100% for doses above reference.
   // Diminishing returns above 100% — going from 80→90% SERT adds less
   // marginal benefit than 50→80%. Factor of 0.6 on excess calibrated to
-  // Thase 2016: 20mg vs 10mg = −1.03 MADRS points (Cambridge Core 2021),
-  // ~2 wellbeing points on our scale. trinGain range of 14 (not 12) gives
-  // strategies room to separate while keeping prozacBaseline anchor at 60.
+  // Thase 2016: 20mg vs 10mg = −1.03 MADRS points (Cambridge Core 2021).
+  // trinGain range of 30 gives wellbeing a meaningful arc (60→~90) and
+  // allows strategies to visibly separate on the chart.
   const pkFactor = pkScore <= 100
     ? pkScore / 100
     : 1 + (pkScore - 100) / 100 * 0.6;
-  const trinGain = pkFactor * (pdScore / 100) * 14;
+  const trinGain = pkFactor * (pdScore / 100) * 30;
   // Transition dip: stress pulls you below baseline temporarily
   const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
   return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };

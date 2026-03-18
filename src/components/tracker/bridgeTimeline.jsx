@@ -96,13 +96,13 @@ function makeBridgeStress(endOffset, amplitude, center, width, steepness) {
   };
 }
 
-// Bridge boost reduced from 8→4: fluoxetine's SERT contribution now flows
-// through the PK score (via cS), so the ad-hoc boost is halved to avoid
-// double-counting the serotonergic coverage benefit.
+// Bridge boost: fluoxetine's SERT contribution flows through PK score (via cS),
+// but ad-hoc boost (max 6) keeps strategies with longer Prozac coverage visibly
+// ahead during the bridge phase.
 function makeBridgeBoost(coverageDays) {
   return (day, fE) => {
     return (fE > 2 && day >= BRIDGE_START && day < BRIDGE_START + coverageDays)
-      ? Math.min(4, (fE / 20) * 4) : 0;
+      ? Math.min(6, (fE / 20) * 6) : 0;
   };
 }
 
@@ -116,25 +116,27 @@ function makeBridgeBoost(coverageDays) {
 //   T20 fast: 0.60 → 0.36
 //   T15 wk:  0.65 → 0.40
 //   T15:     0.62 → 0.38
-export const bridgeStress   = makeBridgeStress(15, 0.50, 5, 4,   2.5);
+// Stress amplitudes scaled up (~6×) so strategy differences are clearly
+// visible on the 0-100 wellbeing chart. Ratio between strategies preserved.
+export const bridgeStress   = makeBridgeStress(15, 3.0, 5, 4,   2.5);
 export const bridgeBoost    = makeBridgeBoost(20);
 
-export const bridgeStress14 = makeBridgeStress(21, 0.50, 5, 5,   2.5);
+export const bridgeStress14 = makeBridgeStress(21, 3.0, 5, 5,   2.5);
 export const bridgeBoost14  = makeBridgeBoost(26);
 
-export const bridgeStressSD = makeBridgeStress(21, 0.45, 5, 4.5, 2.5);
+export const bridgeStressSD = makeBridgeStress(21, 2.7, 5, 4.5, 2.5);
 export const bridgeBoostSD  = makeBridgeBoost(24);
 
 // T20 fast: T20 from bd 9, higher SERT means softer cliff
-export const bridgeStressUT = makeBridgeStress(21, 0.36, 5, 5, 2.5);
+export const bridgeStressUT = makeBridgeStress(21, 2.2, 5, 5, 2.5);
 export const bridgeBoostUT  = makeBridgeBoost(26);
 
 // T15 wk: T15 first week then T20, slightly higher stress than T20 fast
-export const bridgeStressUT15w = makeBridgeStress(21, 0.40, 5, 5, 2.5);
+export const bridgeStressUT15w = makeBridgeStress(21, 2.4, 5, 5, 2.5);
 export const bridgeBoostUT15w  = makeBridgeBoost(26);
 
 // T15: alternating T10+P20 / T20 for 14d, then T15 forever.
-export const bridgeStressT15 = makeBridgeStress(21, 0.38, 5, 5, 2.5);
+export const bridgeStressT15 = makeBridgeStress(21, 2.3, 5, 5, 2.5);
 export const bridgeBoostT15  = makeBridgeBoost(26);
 
 // ── Timeline generators ──
