@@ -96,40 +96,45 @@ function makeBridgeStress(endOffset, amplitude, center, width, steepness) {
   };
 }
 
+// Bridge boost reduced from 8→4: fluoxetine's SERT contribution now flows
+// through the PK score (via cS), so the ad-hoc boost is halved to avoid
+// double-counting the serotonergic coverage benefit.
 function makeBridgeBoost(coverageDays) {
   return (day, fE) => {
     return (fE > 2 && day >= BRIDGE_START && day < BRIDGE_START + coverageDays)
-      ? Math.min(8, (fE / 20) * 8) : 0;
+      ? Math.min(4, (fE / 20) * 4) : 0;
   };
 }
 
-// Stress amplitudes calibrated from PK-computed SERT occupancy cliffs:
-//   Alt 8d:  SERT drops 26.1pp over 10d post-bridge → amp 0.80
-//   Alt 14d: SERT drops 26.5pp over 10d post-bridge → amp 0.80 (same cliff, just delayed)
-//   Step-down: SERT drops 24.0pp over 10d → amp 0.73 (q3d phase pre-tapers SERT)
-// The real advantage of longer bridges is more Trintellix PD maturation time,
-// not a softer discontinuation cliff (norfluoxetine t½=223h dominates either way).
-export const bridgeStress   = makeBridgeStress(15, 0.80, 5, 4,   2.5);
+// Stress amplitudes reduced ~40%: the SERT occupancy cliff now flows through
+// the PK score (via combined SERT cS), so the ad-hoc discontinuation stress
+// only needs to model the non-SERT aspects (receptor downregulation lag,
+// serotonin transient, autonomic readjustment).
+//   Alt 8d:  0.80 → 0.50
+//   Alt 14d: 0.80 → 0.50
+//   Step-down: 0.73 → 0.45
+//   T20 fast: 0.60 → 0.36
+//   T15 wk:  0.65 → 0.40
+//   T15:     0.62 → 0.38
+export const bridgeStress   = makeBridgeStress(15, 0.50, 5, 4,   2.5);
 export const bridgeBoost    = makeBridgeBoost(20);
 
-export const bridgeStress14 = makeBridgeStress(21, 0.80, 5, 5,   2.5);
+export const bridgeStress14 = makeBridgeStress(21, 0.50, 5, 5,   2.5);
 export const bridgeBoost14  = makeBridgeBoost(26);
 
-export const bridgeStressSD = makeBridgeStress(21, 0.73, 5, 4.5, 2.5);
+export const bridgeStressSD = makeBridgeStress(21, 0.45, 5, 4.5, 2.5);
 export const bridgeBoostSD  = makeBridgeBoost(24);
 
 // T20 fast: T20 from bd 9, higher SERT means softer cliff
-export const bridgeStressUT = makeBridgeStress(21, 0.60, 5, 5, 2.5);
+export const bridgeStressUT = makeBridgeStress(21, 0.36, 5, 5, 2.5);
 export const bridgeBoostUT  = makeBridgeBoost(26);
 
 // T15 wk: T15 first week then T20, slightly higher stress than T20 fast
-// (less SERT coverage during first alt week)
-export const bridgeStressUT15w = makeBridgeStress(21, 0.65, 5, 5, 2.5);
+export const bridgeStressUT15w = makeBridgeStress(21, 0.40, 5, 5, 2.5);
 export const bridgeBoostUT15w  = makeBridgeBoost(26);
 
 // T15: alternating T10+P20 / T20 for 14d, then T15 forever.
-// Mixed T dosages give good SERT coverage during bridge; T15 maintenance = moderate stress.
-export const bridgeStressT15 = makeBridgeStress(21, 0.62, 5, 5, 2.5);
+export const bridgeStressT15 = makeBridgeStress(21, 0.38, 5, 5, 2.5);
 export const bridgeBoostT15  = makeBridgeBoost(26);
 
 // ── Timeline generators ──

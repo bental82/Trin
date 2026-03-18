@@ -184,15 +184,24 @@ export function computePD(day) {
 }
 
 // ── PK score weighting ──
+// Uses combined SERT (cS) — not vort-only (sV) — so fluoxetine's SERT
+// contribution during bridge phases flows through the PK pathway.
+// SERT weight 50%: primary antidepressant mechanism for all SRIs including
+// vortioxetine (Thase 2016 meta-analysis: clear dose-dependent MADRS response,
+// 20mg Δ-4.57 vs 10mg Δ-3.57 vs 5mg Δ-2.27; Stenkrona 2013 PET: SERT
+// occupancy drives dose-response 50%→65%→80% at 5/10/20mg).
+// Multimodal receptors (5-HT3/1A/7/1B/1D) modulate the response — cognition,
+// tolerability, anxiolysis — but saturate at low doses and don't independently
+// drive antidepressant efficacy.
 function computePkRaw(pk) {
   return (
-    pk.sV * 0.30 +
-    (pk["5-HT3"]  || 0) * 0.22 +
-    (pk["5-HT1A"] || 0) * 0.20 +
-    (pk["5-HT7"]  || 0) * 0.10 +
-    (pk["5-HT1B"] || 0) * 0.06 +
-    (pk["5-HT1D"] || 0) * 0.05 +
-    Math.min(100, pk.vE * 5) * 0.07
+    pk.cS * 0.50 +
+    (pk["5-HT3"]  || 0) * 0.12 +
+    (pk["5-HT1A"] || 0) * 0.12 +
+    (pk["5-HT7"]  || 0) * 0.08 +
+    (pk["5-HT1B"] || 0) * 0.04 +
+    (pk["5-HT1D"] || 0) * 0.03 +
+    Math.min(100, pk.vE * 5) * 0.11
   );
 }
 
@@ -222,10 +231,10 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DE
     cypStress: pdStress.cypStress,
   };
 
-  // PK score: always normalize against 10mg steady state so higher doses
-  // can exceed 100% — reflecting their higher SERT/receptor occupancy ceiling.
-  // Clinical data (pooled 6 trials): 20mg → +1 MADRS point vs 10mg,
-  // 51.4% vs 46.0% response, onset 4 weeks earlier (Thase 2023, Baldwin 2016).
+  // PK score: normalize against T20-fast steady state (getDose day 200).
+  // Uses combined SERT (cS) so fluoxetine bridge coverage is visible.
+  // Clinical data (Thase 2016, 11 RCTs): 20mg Δ-4.57 vs 10mg Δ-3.57 MADRS;
+  // 20mg vs 10mg direct: −1.03 MADRS points, onset 2 weeks earlier.
   const pkRaw = computePkRaw(pk);
   const pkScore = (pkRaw / Math.max(getSteadyStatePkMax(DEFAULT_CYP_BASE), 1)) * 100;
 
@@ -234,14 +243,16 @@ export function computeAll(day, doseFn = getDose, pdFn = computePD, cypBase = DE
 
   // Prozac baseline ~60% — you were functional but not optimal
   const prozacBaseline = 60;
-  // Dose-response: pkScore >100% for doses above 10mg reference.
+  // Dose-response: pkScore >100% for doses above reference.
   // Diminishing returns above 100% — going from 80→90% SERT adds less
-  // marginal benefit than 50→80%. Factor of 0.5 on excess matches the
-  // ~1 MADRS point (≈1.5 wellbeing points) advantage of 20mg over 10mg.
+  // marginal benefit than 50→80%. Factor of 0.6 on excess calibrated to
+  // Thase 2016: 20mg vs 10mg = −1.03 MADRS points (Cambridge Core 2021),
+  // ~2 wellbeing points on our scale. trinGain range of 14 (not 12) gives
+  // strategies room to separate while keeping prozacBaseline anchor at 60.
   const pkFactor = pkScore <= 100
     ? pkScore / 100
-    : 1 + (pkScore - 100) / 100 * 0.5;
-  const trinGain = pkFactor * (pdScore / 100) * 12;
+    : 1 + (pkScore - 100) / 100 * 0.6;
+  const trinGain = pkFactor * (pdScore / 100) * 14;
   // Transition dip: stress pulls you below baseline temporarily
   const wellbeing = Math.max(0, Math.min(100, prozacBaseline + trinGain - stress));
   return { ...pk, ...pd, pkScore, pdScore, stressScore: stress, wellbeing, day };
