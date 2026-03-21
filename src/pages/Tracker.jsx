@@ -1,31 +1,29 @@
 import React, { useState, useMemo } from "react";
 import { genTimeline, computeAll, getDose, computePD, TODAY_N } from "@/components/tracker/pkEngine";
-import { genBridgeTimeline, genBridgeTimeline14, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
+import { genBridgeTimeline, genBridgeTimeline14, genBridgeTimelineSD, genBridgeTimelineUT, genBridgeTimelineUT15w, genBridgeTimelineT15, BRIDGE_START } from "@/components/tracker/bridgeTimeline";
 import TodayTab      from "@/components/tracker/TodayTab";
-import WellbeingTab  from "@/components/tracker/WellbeingTab";
+
 import PDTab         from "@/components/tracker/PDTab";
 import SERTTab       from "@/components/tracker/SERTTab";
 import ReceptorTab   from "@/components/tracker/ReceptorTab";
 import PlasmaTab     from "@/components/tracker/PlasmaTab";
 import LearnTab      from "@/components/tracker/LearnTab";
-import DiaryTab      from "@/components/tracker/DiaryTab";
 import GlossaryTab   from "@/components/tracker/GlossaryTab";
 import BridgeTab     from "@/components/tracker/BridgeTab";
+import DiaryTab      from "@/components/tracker/DiaryTab";
 import { Pill } from "lucide-react";
 
 const DATA_TABS = [
-  { id: "wellbeing",label: "🧠 Wellbeing" },
+  { id: "bridge",   label: "🌉 Bridges"   },
   { id: "pd",       label: "PD Curves"   },
   { id: "sert",     label: "SERT"        },
   { id: "rec",      label: "5-HT"        },
   { id: "plasma",   label: "Plasma"      },
-  { id: "bridge",   label: "🌉 Bridge"   },
 ];
 
 const INFO_TABS = [
   { id: "learn",    label: "📖 Learn"    },
   { id: "glossary", label: "🔤 Glossary" },
-  { id: "diary",    label: "📝 Diary"    },
 ];
 
 export default function Tracker() {
@@ -34,68 +32,87 @@ export default function Tracker() {
   const [showHelp, setShowHelp] = useState(false);
   const [tabGroup, setTabGroup] = useState("data"); // "data" | "info"
   const [viewDay,  setViewDay]  = useState(TODAY_N);
+  const [strategy, setStrategy] = useState("uptitrate");  // "alt8" | "alt14" | "stepdown" | "uptitrate" | "ut15wk" | "t15"
+  const [bridgeShow, setBridgeShow] = useState({ alt8: false, alt14: false, sd: false, ut: true, ut15: false, t15: false });
+  const [cypFactor, setCypFactor] = useState(2.2);
 
-  const tl     = useMemo(() => genTimeline(90), []);
-  const tlBridge = useMemo(() => genBridgeTimeline(90), []);
-  const tlBridge14 = useMemo(() => genBridgeTimeline14(90), []);
+  const tl     = useMemo(() => genTimeline(90, cypFactor), [cypFactor]);
+  const tlBridge = useMemo(() => genBridgeTimeline(90, cypFactor), [cypFactor]);
+  const tlBridge14 = useMemo(() => genBridgeTimeline14(90, cypFactor), [cypFactor]);
+  const tlBridgeSD = useMemo(() => genBridgeTimelineSD(90, cypFactor), [cypFactor]);
+  const tlBridgeUT = useMemo(() => genBridgeTimelineUT(90, cypFactor), [cypFactor]);
+  const tlBridgeUT15w = useMemo(() => genBridgeTimelineUT15w(90, cypFactor), [cypFactor]);
+  const tlBridgeT15 = useMemo(() => genBridgeTimelineT15(90, cypFactor), [cypFactor]);
+  const tlAll = useMemo(() => ({ alt8: tlBridge, alt14: tlBridge14, sd: tlBridgeSD, ut: tlBridgeUT, ut15: tlBridgeUT15w, t15: tlBridgeT15 }), [tlBridge, tlBridge14, tlBridgeSD, tlBridgeUT, tlBridgeUT15w, tlBridgeT15]);
+  const tlByStrategy = { alt8: tlBridge, alt14: tlBridge14, stepdown: tlBridgeSD, uptitrate: tlBridgeUT, ut15wk: tlBridgeUT15w, t15: tlBridgeT15 };
+  const tlActive = tlByStrategy[strategy] || tlBridge14;
   const tN     = viewDay;
-  const tW     = useMemo(() => computeAll(tN), [tN]);
+  const tW     = useMemo(() => computeAll(tN, getDose, computePD, cypFactor), [tN, cypFactor]);
   const peakWB = useMemo(() => tl.reduce((b, d) => d.wellbeing > b.wellbeing ? d : b, tl[0]), [tl]);
-  const tlM    = useMemo(() => tl.filter(d => d.day % 1 === 0), [tl]);
-  const day1WB = useMemo(() => computeAll(0).wellbeing, []);
 
-  const altDaysWB = useMemo(() => {
-    const bd = tlBridge.find(d => d.day === tN);
-    return bd ? bd.wellbeing : 0;
-  }, [tN, tlBridge]);
+  const day1WB = useMemo(() => computeAll(0, getDose, computePD, cypFactor).wellbeing, [cypFactor]);
+
+  // Bridge data point for the current day — same fields as tW
+  const bW = useMemo(() => {
+    const bd = tlActive.find(d => d.day === tN);
+    return bd || null;
+  }, [tN, tlActive]);
+
+  const strategyLabel = strategy === "alt8" ? "Alt 8d" : strategy === "alt14" ? "Alt 14d" : strategy === "uptitrate" ? "15→20" : strategy === "ut15wk" ? "T15 wk" : strategy === "t15" ? "T15" : "Step-down";
+  const bridgeColor = strategy === "alt8" ? "#0891b2" : strategy === "alt14" ? "#7c3aed" : strategy === "uptitrate" ? "#e11d48" : strategy === "ut15wk" ? "#e11d48" : strategy === "t15" ? "#059669" : "#d97706";
 
   const statCards = [
     {
       label: "SERT Occupancy",
       value: tW.cS.toFixed(0) + "%",
+      bridgeValue: bW ? bW.cS.toFixed(0) + "%" : null,
       color: "#f0abfc",
+      bridgeColor,
       icon: "🅿️",
       detail: "Combined vortioxetine + residual fluoxetine occupancy of serotonin transporter. Well above the 50% minimum therapeutic threshold.",
     },
     {
       label: "PD Maturation",
       value: tW.pdScore.toFixed(0) + "%",
+      bridgeValue: bW ? bW.pdScore.toFixed(0) + "%" : null,
       color: "#a78bfa",
+      bridgeColor,
       icon: "🧬",
       detail: "Weighted composite of autoreceptor desensitization, GABA disinhibition, circadian remodeling, BDNF, DMN, and glymphatic restoration.",
     },
     {
       label: "Wellbeing Score",
       value: tW.wellbeing.toFixed(1),
+      bridgeValue: bW ? bW.wellbeing.toFixed(1) : null,
       color: "#22c55e",
+      bridgeColor,
       icon: "💚",
       detail: `Model projection: PK ceiling × PD access − transition stress. Peak projected at Day ${Math.round(peakWB.day) + 1} (score ${peakWB.wellbeing.toFixed(0)}).`,
     },
     {
-      label: "P20+Alt Days Wellbeing",
-      value: altDaysWB.toFixed(1),
-      color: "#0891b2",
-      icon: "🌉",
-      detail: "Projected wellbeing if using the P20+alt days bridge strategy (Prozac 20mg daily ×7d, then every other day ×8d, starting D23).",
-    },
-    {
       label: "Transition Stress",
       value: tW.stressScore.toFixed(0),
+      bridgeValue: bW ? bW.stressScore.toFixed(0) : null,
       color: "#f97316",
+      bridgeColor,
       icon: "⚡",
       detail: "Temporary destabilization as norfluoxetine (Prozac metabolite, t½≈9d) clears. Expected peak ~D21-28, then resolves weeks 5-6.",
     },
     {
       label: "CYP2D6 Boost",
       value: tW.cyp.toFixed(2) + "×",
+      bridgeValue: bW ? bW.cyp.toFixed(2) + "×" : null,
       color: "#818cf8",
+      bridgeColor,
       icon: "🚰",
       detail: "Liver enzyme inhibition from Wellbutrin + residual Prozac makes each 10mg vortioxetine act like ~21mg. Will settle to ~2.1× as Prozac clears.",
     },
     {
       label: "BDNF / Neuroplasticity",
       value: tW.bdnf.toFixed(0) + "%",
+      bridgeValue: bW ? bW.bdnf.toFixed(0) + "%" : null,
       color: "#34d399",
+      bridgeColor,
       icon: "🌱",
       detail: "Brain-derived neurotrophic factor — the 'grow new wiring' process. Slowest but most powerful. Barely started now; significant changes weeks 4-8.",
     },
@@ -108,7 +125,7 @@ export default function Tracker() {
     },
   ];
 
-  const activeGroup = tab === "today" ? "today" : DATA_TABS.some(t => t.id === tab) ? "data" : "info";
+  const activeGroup = tab === "today" ? "today" : tab === "diary" ? "diary" : DATA_TABS.some(t => t.id === tab) ? "data" : "info";
 
   return (
     <div style={{
@@ -204,10 +221,14 @@ export default function Tracker() {
         )}
       </div>
 
-      {/* DAY NAVIGATOR */}
+      {/* DAY NAVIGATOR + CYP SLIDER — sticky */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 20,
+        background: "#ffffff",
+        borderBottom: "1px solid #e2e8f0",
+      }}>
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-        background: "#ffffff", borderBottom: "1px solid #e2e8f0",
         padding: "8px 16px",
       }}>
         <button
@@ -256,6 +277,24 @@ export default function Tracker() {
         >›</button>
       </div>
 
+      {/* CYP2D6 SLIDER */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        padding: "6px 16px",
+        borderTop: "1px solid #f1f5f9",
+      }}>
+        <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>CYP2D6</span>
+        <span style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, minWidth: 32, textAlign: "right" }}>{cypFactor.toFixed(1)}×</span>
+        <input
+          type="range" min="1.5" max="2.2" step="0.1"
+          value={cypFactor}
+          onChange={e => setCypFactor(parseFloat(e.target.value))}
+          style={{ width: 120, accentColor: "#a78bfa" }}
+        />
+        <span style={{ fontSize: 10, color: "#94a3b8" }}>1.5×–2.2×</span>
+      </div>
+      </div>{/* end sticky wrapper */}
+
       {/* TAB GROUP SWITCHER */}
       <div style={{
         background: "#ffffff",
@@ -276,12 +315,24 @@ export default function Tracker() {
           >
             📊 Today
           </button>
+          <button
+            onClick={() => { setTabGroup("diary"); setTab("diary"); }}
+            style={{
+              padding: "6px 14px", borderRadius: "8px 8px 0 0",
+              border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700,
+              background: tab === "diary" ? "#fdf2f8" : "transparent",
+              color: tab === "diary" ? "#be185d" : "#64748b",
+              borderBottom: tab === "diary" ? "2px solid #be185d" : "2px solid transparent",
+            }}
+          >
+            💊 Diary
+          </button>
           {[["data", "📈 Charts"], ["info", "📚 Learn"]].map(([g, lbl]) => (
             <button
               key={g}
               onClick={() => {
                 setTabGroup(g);
-                if (g === "data") setTab("wellbeing");
+                if (g === "data") setTab("bridge");
                 else setTab("learn");
               }}
               style={{
@@ -299,7 +350,7 @@ export default function Tracker() {
 
         {/* Sub-tabs — hidden when Today is active */}
         <div style={{
-          display: activeGroup === "today" ? "none" : "flex", gap: 2, padding: "8px 16px 0",
+          display: (activeGroup === "today" || activeGroup === "diary") ? "none" : "flex", gap: 2, padding: "8px 16px 0",
           overflowX: "auto", scrollbarWidth: "none",
         }}>
           {(activeGroup === "data" ? DATA_TABS : INFO_TABS).map(({ id, label }) => {
@@ -324,16 +375,15 @@ export default function Tracker() {
 
       {/* TAB CONTENT */}
       <div style={{ padding: "16px 12px 32px" }}>
-        {tab === "today"    && <TodayTab tN={tN} statCards={statCards} />}
-        {tab === "wellbeing"&& <WellbeingTab tl={tl} tlM={tlM} tN={tN} peakWB={peakWB} tlBridge={tlBridge} />}
-        {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} />}
-        {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlBridge={tlBridge} />}
-        {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlBridge={tlBridge} />}
-        {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlBridge={tlBridge} />}
-        {tab === "bridge"   && <BridgeTab />}
+        {tab === "today"    && <TodayTab tN={tN} statCards={statCards} strategy={strategy} setStrategy={setStrategy} strategyLabel={strategyLabel} />}
+        {tab === "diary"    && <DiaryTab tN={tN} />}
+        {tab === "pd"       && <PDTab tl={tl} tN={tN} tW={tW} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "sert"     && <SERTTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "rec"      && <ReceptorTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "plasma"   && <PlasmaTab tl={tl} tN={tN} tlAll={tlAll} bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} />}
+        {tab === "bridge"   && <BridgeTab bridgeShow={bridgeShow} setBridgeShow={setBridgeShow} cypBase={cypFactor} />}
         {tab === "learn"    && <LearnTab tN={tN} tW={tW} />}
         {tab === "glossary" && <GlossaryTab />}
-        {tab === "diary"    && <DiaryTab />}
       </div>
 
       {/* FOOTER */}
