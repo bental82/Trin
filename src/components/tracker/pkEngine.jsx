@@ -5,19 +5,19 @@ const LN2 = Math.log(2);
 // Bridge phase starts Day 22 — Prozac 20mg reintroduced for uptitration support
 export const BRIDGE_DAY = 22;
 
-// ── Actual dose schedule (T20-fast regimen) ──
-// Pre-switch → overlap → washout → bridge → uptitrate → maintenance
+// ── Actual dose schedule (recorded intake) ──
+// Day 1 (d=0): T5 + P20 (switch day)
+// Days 2–8 (d=1–7): T10 + P20
+// Days 9–24 (d=8–23): T10 only
+// Days 25–29 (d=24–28): T10 + P20 (bridge restart)
+// Day 30+ (d=29+): T10 only
 export function getDose(d) {
-  if (d < 0) return [0, 40];                                                  // Pre-switch: Prozac 40mg
-  if (d === 0) return [5, 20];                                                 // Day 0: Vort 5mg intro, Prozac halved
-  if (d <= 7) return [10, 20];                                                 // Week 1: Vort 10mg + Prozac 20mg overlap
-  if (d < BRIDGE_DAY) return [10, 0];                                          // Weeks 2-3: Vort 10mg, Prozac washout
-  const bd = d - BRIDGE_DAY;
-  if (bd < 7) return [10, 20];                                                 // Bridge days 0-6: Vort 10mg + Prozac 20mg daily
-  if (bd === 7) return [10, 20];                                               // Bridge day 7: last T10 + P20
-  if (bd === 8) return [15, 0];                                                // Bridge day 8: uptitrate to T15 (P20 off-day)
-  if (bd >= 9 && bd < 21) return [20, ((bd - 7) % 2 === 0) ? 20 : 0];        // Bridge day 9+: T20 + P20 alternating
-  return [20, 0];                                                              // Maintenance: T20 only
+  if (d < 0) return [0, 40];                   // Pre-switch: Prozac 40mg
+  if (d === 0) return [5, 20];                  // Day 1: Vort 5mg intro, Prozac halved
+  if (d <= 7) return [10, 20];                  // Days 2-8: Vort 10mg + Prozac 20mg overlap
+  if (d <= 23) return [10, 0];                  // Days 9-24: Vort 10mg, Prozac washout
+  if (d <= 28) return [10, 20];                 // Days 25-29: P20 bridge restart + T10
+  return [10, 0];                               // Day 30+: Vort 10mg only
 }
 
 // ── PK Constants ──
