@@ -1,7 +1,21 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { MOODS, TAGS } from "./concepts";
-import { computeAll, pkCalc, START, TODAY_S } from "./pkEngine";
+import { computeAll, pkCalc, getDose, START, TODAY_S, getTodayN } from "./pkEngine";
+
+// ── Historical pill log (days 1–29, hardcoded from actual intake) ──
+const PILL_LOG = [
+  { day: 1,  t: 5,  p: 20, note: "Switch day — T5 + P20" },
+  ...Array.from({ length: 7 }, (_, i) => ({ day: i + 2, t: 10, p: 20, note: "T10 + P20" })),
+  ...Array.from({ length: 16 }, (_, i) => ({ day: i + 9, t: 10, p: 0, note: "T10 only" })),
+  ...Array.from({ length: 5 }, (_, i) => ({ day: i + 25, t: 10, p: 20, note: "P20 bridge restart + T10" })),
+];
+
+function dateForDay(d) {
+  const dt = new Date(START);
+  dt.setDate(dt.getDate() + d);
+  return dt.toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" });
+}
 
 export default function DiaryTab() {
   const [entries, setEntries]   = useState([]);
@@ -167,6 +181,85 @@ export default function DiaryTab() {
           );
         })
       )}
+      {/* ── Trintellix PK/PD Lookback ── */}
+      <LookbackCard />
+
+      {/* ── Pill Log (historical) ── */}
+      <div style={{ marginTop: 16 }}>
+        <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#334155" }}>💊 Pill Log (Days 1–29)</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto auto", gap: "3px 8px", fontSize: 12, alignItems: "center" }}>
+          <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10 }}>Day</div>
+          <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10 }}>Date</div>
+          <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10 }}>T (mg)</div>
+          <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10 }}>P (mg)</div>
+          <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10 }}>Note</div>
+          {PILL_LOG.map(r => (
+            <React.Fragment key={r.day}>
+              <div style={{ fontWeight: 600, color: "#0891b2" }}>D{r.day}</div>
+              <div style={{ color: "#64748b" }}>{dateForDay(r.day - 1)}</div>
+              <div style={{ fontWeight: 600, color: "#059669" }}>{r.t}</div>
+              <div style={{ fontWeight: 600, color: r.p > 0 ? "#d97706" : "#cbd5e1" }}>{r.p || "—"}</div>
+              <div style={{ color: "#94a3b8", fontSize: 11 }}>{r.note}</div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Trintellix PK/PD Lookback Card ──
+function LookbackCard() {
+  const todayN = useMemo(() => getTodayN(), []);
+  if (todayN < 3) return null;
+
+  const now = pkCalc(todayN);
+  const d3  = pkCalc(todayN - 3);
+  const d7  = todayN >= 7 ? pkCalc(todayN - 7) : null;
+  const allNow = computeAll(todayN);
+  const all3   = computeAll(todayN - 3);
+  const all7   = todayN >= 7 ? computeAll(todayN - 7) : null;
+
+  const arrow = (cur, prev) => cur > prev + 0.5 ? "↑" : cur < prev - 0.5 ? "↓" : "→";
+  const clr   = (cur, prev) => cur > prev + 0.5 ? "#16a34a" : cur < prev - 0.5 ? "#ef4444" : "#94a3b8";
+
+  const rows = [
+    { label: "T plasma (vE)", now: now.vE, d3: d3.vE, d7: d7?.vE },
+    { label: "T dose (mg)",   now: now.vN, d3: d3.vN, d7: d7?.vN },
+    { label: "SERT (T only)", now: now.sV, d3: d3.sV, d7: d7?.sV, pct: true },
+    { label: "SERT combined", now: now.cS, d3: d3.cS, d7: d7?.cS, pct: true },
+    { label: "CYP2D6 boost",  now: now.cyp, d3: d3.cyp, d7: d7?.cyp, suffix: "×" },
+    { label: "PD maturation",  now: allNow.pdScore, d3: all3.pdScore, d7: all7?.pdScore, pct: true },
+    { label: "Wellbeing",      now: allNow.wellbeing, d3: all3.wellbeing, d7: all7?.wellbeing },
+  ];
+
+  return (
+    <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 12, background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}>
+      <div style={{ fontWeight: 700, fontSize: 13, color: "#065f46", marginBottom: 8 }}>📊 Trintellix PK/PD — Lookback</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "4px 10px", fontSize: 12, alignItems: "center" }}>
+        <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10 }}>Metric</div>
+        <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10, textAlign: "right" }}>Today</div>
+        <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10, textAlign: "right" }}>3d ago</div>
+        <div style={{ fontWeight: 700, color: "#94a3b8", fontSize: 10, textAlign: "right" }}>7d ago</div>
+        {rows.map(r => {
+          const fmt = v => v == null ? "—" : (r.pct ? v.toFixed(0) + "%" : r.suffix ? v.toFixed(2) + r.suffix : v.toFixed(1));
+          return (
+            <React.Fragment key={r.label}>
+              <div style={{ color: "#334155", fontWeight: 600 }}>{r.label}</div>
+              <div style={{ textAlign: "right", fontWeight: 700, color: "#059669" }}>{fmt(r.now)}</div>
+              <div style={{ textAlign: "right", fontWeight: 600, color: clr(r.now, r.d3) }}>
+                {fmt(r.d3)} {arrow(r.now, r.d3)}
+              </div>
+              <div style={{ textAlign: "right", fontWeight: 600, color: r.d7 != null ? clr(r.now, r.d7) : "#cbd5e1" }}>
+                {fmt(r.d7)} {r.d7 != null ? arrow(r.now, r.d7) : ""}
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 8, fontSize: 11, color: "#64748b", direction: "rtl", textAlign: "right" }}>
+        ↑ = עלייה מאז · ↓ = ירידה מאז · → = יציב
+      </div>
     </div>
   );
 }

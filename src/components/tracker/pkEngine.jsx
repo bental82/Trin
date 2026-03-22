@@ -3,10 +3,17 @@ export const TODAY_S = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/
 const LN2 = Math.log(2);
 
 // ── Default dose schedule (actual regimen) ──
+// Day 1 (d=0): T5 + P20
+// Days 2–8 (d=1–7): T10 + P20
+// Days 9–24 (d=8–23): T10 only
+// Days 25–29 (d=24–28): T10 + P20 (bridge restart)
+// Day 30+ (d=29+): T10 only
 export function getDose(d) {
   if (d < 0) return [0, 40];
   if (d === 0) return [5, 20];
   if (d <= 7) return [10, 20];
+  if (d <= 23) return [10, 0];
+  if (d <= 28) return [10, 20];
   return [10, 0];
 }
 
